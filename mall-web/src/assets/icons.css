@@ -1,0 +1,24 @@
+/* 图标样式 */
+.icon-location::before { content: '📍'; }
+.icon-goods::before { content: '📦'; }
+.icon-order::before { content: '📋'; }
+.icon-payment::before { content: '💳'; }
+.icon-wallet::before { content: '👛'; }
+.icon-alipay::before { content: '🅰️'; }
+.icon-wechat::before { content: '💬'; }
+.icon-warning::before { content: '⚠️'; }
+.icon-success::before { content: '✅'; }
+.icon-tips::before { content: '💡'; }
+.icon-recharge::before { content: '💰'; }
+.icon-record::before { content: '📊'; }
+.icon-history::before { content: '📜'; }
+.icon-password::before { content: '🔒'; }
+.icon-check::before { content: '✓'; }
+.icon-arrow-right::before { content: '→'; }
+
+/* 通用图标样式 */
+[class*="icon-"] {
+  display: inline-block;
+  font-style: normal;
+  vertical-align: middle;
+}
