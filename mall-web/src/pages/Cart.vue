@@ -30,7 +30,13 @@
         </div>
         <div class="cart-subtotal">￥{{ (item.price * item.quantity).toFixed(2) }}</div>
         <div class="cart-ops">
-          <span class="cart-action" @click="moveToFavorite(item)">移入收藏</span>
+          <span
+            class="cart-action"
+            :class="{ 'favorited': favoriteStatus[item.productId] }"
+            @click="moveToFavorite(item)"
+          >
+            {{ favoriteStatus[item.productId] ? '已收藏' : '移入收藏' }}
+          </span>
           <span class="cart-action" @click="deleteItem(item)">删除</span>
         </div>
       </div>
@@ -54,11 +60,14 @@
 import { useRouter } from 'vue-router'
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAccessToken, handleAuthError } from '../utils/auth'
+import { favoriteApi } from '../api/favorite'
 
 const cartList = ref<any[]>([])
 const loading = ref(false)
 const allSelected = ref(false)
+const favoriteStatus = ref<{ [productId: number]: boolean }>({})
 
 async function fetchCartList() {
   loading.value = true
@@ -100,6 +109,9 @@ async function fetchCartList() {
         }
       })
     )
+
+    // 加载收藏状态
+    await loadFavoriteStatus()
   } catch (error: any) {
     cartList.value = []
     console.error('获取购物车失败:', error)
@@ -113,6 +125,23 @@ async function fetchCartList() {
     }
   } finally {
     loading.value = false
+  }
+}
+
+// 加载收藏状态
+async function loadFavoriteStatus() {
+  try {
+    const promises = cartList.value.map(async (item) => {
+      try {
+        const isFavorited = await favoriteApi.checkFavorite(item.productId)
+        favoriteStatus.value[item.productId] = isFavorited
+      } catch (error) {
+        favoriteStatus.value[item.productId] = false
+      }
+    })
+    await Promise.all(promises)
+  } catch (error) {
+    console.error('加载收藏状态失败:', error)
   }
 }
 
@@ -153,21 +182,25 @@ function batchDelete() {
     updateAllSelected()
   })
 }
-function deleteItem(item: any) {
+async function deleteItem(item: any) {
   const token = localStorage.getItem('access_token') || localStorage.getItem('token')
   if (!token) {
     console.error('未找到token，用户可能未登录')
     return
   }
 
-  axios.delete(`http://localhost:9999/cart-service/api/cart/${item.id}`, {
-    headers: {
-      'Authorization': 'Bearer ' + token
-    }
-  }).then(() => {
+  try {
+    await axios.delete(`http://localhost:9999/cart-service/api/cart/${item.id}`, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    })
     cartList.value = cartList.value.filter(i => i.id !== item.id)
     updateAllSelected()
-  })
+  } catch (error) {
+    console.error('删除商品失败:', error)
+    throw error
+  }
 }
 
 function changeQuantity(item: any) {
@@ -220,12 +253,77 @@ function clearCart() {
     allSelected.value = false
   })
 }
-function batchMoveToFavorite() {
-  // TODO: 批量移入收藏
+// 批量移入收藏
+async function batchMoveToFavorite() {
+  const selectedItems = cartList.value.filter(item => item.selected)
+  if (selectedItems.length === 0) {
+    ElMessage.warning('请选择要移入收藏的商品')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要将选中的 ${selectedItems.length} 件商品移入收藏吗？`,
+      '批量移入收藏',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    const promises = selectedItems.map(item => moveToFavorite(item, false))
+    await Promise.all(promises)
+
+    ElMessage.success(`成功移入收藏 ${selectedItems.length} 件商品`)
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error('批量移入收藏失败')
+    }
+  }
 }
 
-function moveToFavorite(item: any) {
-  // TODO: 单个移入收藏
+// 单个移入收藏
+async function moveToFavorite(item: any, showConfirm: boolean = true) {
+  try {
+    // 检查是否已收藏
+    if (favoriteStatus.value[item.productId]) {
+      ElMessage.info('该商品已在收藏列表中')
+      return
+    }
+
+    if (showConfirm) {
+      await ElMessageBox.confirm(
+        `确定要将"${item.productName}"移入收藏吗？`,
+        '移入收藏',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'info'
+        }
+      )
+    }
+
+    // 添加到收藏
+    await favoriteApi.addFavorite(item.productId)
+
+    // 更新收藏状态
+    favoriteStatus.value[item.productId] = true
+
+    // 从购物车中删除
+    await deleteItem(item)
+
+    if (showConfirm) {
+      ElMessage.success('移入收藏成功')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('移入收藏失败:', error)
+      if (showConfirm) {
+        ElMessage.error(error.message || '移入收藏失败')
+      }
+    }
+  }
 }
 
 function checkout() {
@@ -284,6 +382,16 @@ const goBack = () => {
   color: #409eff;
   cursor: pointer;
   margin-right: 16px;
+  transition: all 0.3s ease;
+}
+
+.cart-action.favorited {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.cart-action.favorited:hover {
+  color: #f78989;
 }
 .cart-count {
   margin-left: auto;

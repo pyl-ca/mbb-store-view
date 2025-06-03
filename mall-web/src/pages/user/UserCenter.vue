@@ -42,6 +42,10 @@
           <el-icon><ChatDotRound /></el-icon>
           <span>评价管理</span>
         </el-menu-item>
+        <el-menu-item index="refunds">
+          <el-icon><RefreshLeft /></el-icon>
+          <span>退款记录</span>
+        </el-menu-item>
       </el-menu>
     </div>
 
@@ -62,7 +66,8 @@ import {
   ShoppingCart,
   Tickets,
   Star,
-  ChatDotRound
+  ChatDotRound,
+  RefreshLeft
 } from '@element-plus/icons-vue'
 import axios from 'axios'
 
@@ -87,6 +92,7 @@ const activeMenu = computed(() => {
   if (path.includes('/user/orders')) return 'orders'
   if (path.includes('/user/favorites')) return 'favorites'
   if (path.includes('/user/reviews')) return 'reviews'
+  if (path.includes('/user/refunds')) return 'refunds'
   return 'profile'
 })
 

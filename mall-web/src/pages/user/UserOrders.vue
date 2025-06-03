@@ -43,13 +43,22 @@
 
           <!-- 订单商品 -->
           <div class="order-items">
-            <div v-for="item in order.orderItems" :key="item.id" class="order-item">
+            <div v-if="!order.orderItems || order.orderItems.length === 0" class="no-items">
+              暂无商品信息
+            </div>
+            <div v-else v-for="item in order.orderItems" :key="item.id" class="order-item">
               <div class="item-image">
-                <img :src="getImageUrl(item.productImage)" :alt="item.productName" />
+                <img
+                  :src="getImageUrl(item.productImage)"
+                  :alt="item.productName"
+                  @error="handleImageError"
+                  @load="handleImageLoad"
+                />
               </div>
               <div class="item-info">
                 <div class="item-name">{{ item.productName }}</div>
                 <div class="item-specs">{{ item.specs }}</div>
+
               </div>
               <div class="item-price">
                 <span class="price">¥{{ item.price }}</span>
@@ -83,19 +92,104 @@
               </el-button>
               <el-button
                 v-if="order.status === 2"
+                type="success"
+                size="small"
+                @click="viewDeliveryInfo(order.orderSn)"
+              >
+                查看物流
+              </el-button>
+              <el-button
+                v-if="order.status === 2"
                 type="primary"
                 size="small"
                 @click="confirmReceive(order.orderSn)"
               >
                 确认收货
               </el-button>
+              <!-- 评价相关按钮：基于评价状态而不是订单状态 -->
               <el-button
-                v-if="order.status === 3"
+                v-if="order.status === 3 && !order.hasReviewed"
+                type="warning"
                 size="small"
-                @click="cancelOrder(order.orderSn)"
+                @click="goToReview(order.orderSn)"
               >
-                取消订单
+                去评价
               </el-button>
+              <el-button
+                v-if="order.status === 3 && order.hasReviewed"
+                type="success"
+                size="small"
+                @click="viewOrderReviews(order.orderSn)"
+              >
+                查看评价
+              </el-button>
+
+              <!-- 退款相关按钮：只要是已完成的订单就可以申请退款 -->
+              <template v-if="order.status === 3">
+                <el-button
+                  v-if="!order.refundRecord"
+                  size="small"
+                  @click="applyRefund(order.orderSn)"
+                >
+                  申请退货
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 0"
+                  type="info"
+                  size="small"
+                  disabled
+                >
+                  退款审核中
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 1"
+                  type="warning"
+                  size="small"
+                  disabled
+                >
+                  退款处理中
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 2"
+                  type="info"
+                  size="small"
+                  disabled
+                >
+                  退款中
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 3"
+                  type="success"
+                  size="small"
+                  @click="viewRefundRecord(order.orderSn)"
+                >
+                  退款成功
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 4"
+                  type="danger"
+                  size="small"
+                  @click="viewRefundRecord(order.orderSn)"
+                >
+                  退款失败
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 5"
+                  type="danger"
+                  size="small"
+                  @click="applyRefund(order.orderSn)"
+                >
+                  重新申请退款
+                </el-button>
+                <el-button
+                  v-else-if="order.refundRecord.status === 6"
+                  type="danger"
+                  size="small"
+                  @click="applyRefund(order.orderSn)"
+                >
+                  重新申请退款
+                </el-button>
+              </template>
             </div>
           </div>
         </div>
@@ -114,14 +208,29 @@
         />
       </div>
     </div>
+
+    <!-- 物流跟踪弹窗 -->
+    <el-dialog v-model="deliveryDialog.visible" title="物流跟踪" width="700px">
+      <DeliveryTracking
+        v-if="deliveryDialog.orderSn"
+        :order-sn="deliveryDialog.orderSn"
+        :order-status="deliveryDialog.orderStatus"
+        :show-actions="true"
+        @confirmed="handleDeliveryConfirmed"
+        @refreshed="handleDeliveryRefreshed"
+      />
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
+import { reviewApi } from '../../api/review'
+import DeliveryTracking from '../../components/DeliveryTracking.vue'
+import { getProductImageUrl } from '../../utils/imageUtils'
 
 const router = useRouter()
 
@@ -158,6 +267,8 @@ interface Order {
   deliveryTime: string | null
   finishTime: string | null
   orderItems: OrderItem[]
+  refundRecord?: any // 退款记录
+  hasReviewed?: boolean // 是否已评价
 }
 
 const loading = ref(false)
@@ -167,6 +278,14 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 
+
+// 物流跟踪弹窗
+const deliveryDialog = reactive({
+  visible: false,
+  orderSn: '',
+  orderStatus: 0
+})
+
 // 订单状态标签
 const orderTabs = ref([
   { label: '全部', value: 'all', count: 0 },
@@ -174,13 +293,33 @@ const orderTabs = ref([
   { label: '待发货', value: '1', count: 0 },
   { label: '待收货', value: '2', count: 0 },
   { label: '待评论', value: '3', count: 0 },
-  { label: '已取消', value: '4', count: 0 }
+  { label: '已取消', value: '4', count: 0 },
+  { label: '退货/退款', value: 'refund', count: 0 }
 ])
 
 // 页面初始化
 onMounted(() => {
   loadOrders()
+
+  // 监听页面可见性变化，当页面重新可见时刷新数据
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
+
+// 页面卸载时移除监听器
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
+
+// 监听页面可见性变化
+function handleVisibilityChange() {
+  if (!document.hidden) {
+    console.log('页面重新可见，刷新订单列表')
+    // 延迟一下再刷新，确保从其他页面返回的数据已经更新
+    setTimeout(() => {
+      loadOrders()
+    }, 500)
+  }
+}
 
 // 加载订单列表
 async function loadOrders() {
@@ -195,11 +334,16 @@ async function loadOrders() {
 
     const params: any = {
       page: currentPage.value,
-      size: pageSize.value
+      size: pageSize.value,
+      includeItems: true  // 尝试请求包含订单商品信息
     }
 
-    if (currentTab.value !== 'all') {
+    // 根据标签页设置筛选条件
+    if (currentTab.value !== 'all' && currentTab.value !== 'refund' && currentTab.value !== '3') {
       params.status = currentTab.value
+    } else if (currentTab.value === '3') {
+      // 待评论：只获取已完成的订单，后续会筛选出未评价的
+      params.status = 3
     }
 
     const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders`, {
@@ -208,8 +352,35 @@ async function loadOrders() {
     })
 
     const data = response.data.data
-    orderList.value = data.records || []
-    total.value = data.total || 0
+    let orders = data.records || []
+
+    // 调试：检查订单数据
+    console.log(`加载了 ${orders.length} 个订单`)
+
+    // 为缺少商品信息的订单加载详细信息
+    await loadMissingOrderItems(orders)
+
+    // 为所有订单检查退款状态和评价状态
+    await checkRefundStatusForOrders(orders)
+    await checkReviewStatusForOrders(orders)
+
+    // 如果选择了退货/退款标签，只显示有退款记录的订单
+    if (currentTab.value === 'refund') {
+      orders = orders.filter((order: Order) => order.refundRecord)
+      console.log(`退货/退款标签页过滤后的订单数量: ${orders.length}`)
+    }
+
+    // 如果选择了待评论标签，只显示已完成且未评价的订单
+    if (currentTab.value === '3') {
+      orders = orders.filter((order: Order) => order.status === 3 && !order.hasReviewed)
+      console.log(`待评论标签页过滤后的订单数量: ${orders.length}`)
+    }
+
+    orderList.value = orders
+    total.value = currentTab.value === 'refund' ? orders.length : (data.total || 0)
+
+    // 最终结果统计
+    console.log(`最终显示 ${orders.length} 个订单`)
 
     // 更新标签计数（这里简化处理，实际可能需要单独接口）
     updateTabCounts()
@@ -228,13 +399,118 @@ async function loadOrders() {
   }
 }
 
+// 为缺少商品信息的订单加载详细信息
+async function loadMissingOrderItems(orders: Order[]) {
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token')
+  if (!token) return
+
+  // 找出没有商品信息的订单
+  const ordersWithoutItems = orders.filter(order => !order.orderItems || order.orderItems.length === 0)
+
+  if (ordersWithoutItems.length === 0) {
+    return
+  }
+
+  console.log(`补充加载 ${ordersWithoutItems.length} 个订单的商品信息`)
+
+  // 为每个缺少商品信息的订单单独调用详情API
+  for (const order of ordersWithoutItems) {
+    try {
+      const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${order.orderSn}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      const orderDetail = response.data.data
+      if (orderDetail && orderDetail.orderItems) {
+        // 更新订单的商品信息
+        order.orderItems = orderDetail.orderItems
+      }
+    } catch (error: any) {
+      console.error(`加载订单 ${order.orderSn} 详细信息失败:`, error)
+    }
+  }
+}
+
+// 检查订单的退款状态
+async function checkRefundStatusForOrders(orders?: Order[]) {
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token')
+  if (!token) return
+
+  const ordersToCheck = orders || orderList.value
+  // 只检查已完成的订单（状态3）
+  const eligibleOrders = ordersToCheck.filter(order => order.status === 3)
+
+  console.log(`检查 ${eligibleOrders.length} 个订单的退款状态`)
+
+  for (const order of eligibleOrders) {
+    try {
+      const response = await axios.get(`http://localhost:9999/payment-service/api/v1/refund/order/${order.orderSn}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (response.data.code === '000000' && response.data.data) {
+        order.refundRecord = response.data.data
+        console.log(`订单 ${order.orderSn} 找到退款记录:`, order.refundRecord)
+      } else {
+        order.refundRecord = null
+      }
+    } catch (error: any) {
+      // 如果是404错误，说明没有退款记录，这是正常的
+      if (error.response?.status === 404) {
+        order.refundRecord = null
+      } else {
+        console.error(`检查订单 ${order.orderSn} 退款状态失败:`, error)
+        order.refundRecord = null
+      }
+    }
+  }
+}
+
+// 检查订单的评价状态
+async function checkReviewStatusForOrders(orders?: Order[]) {
+  const ordersToCheck = orders || orderList.value
+  // 只检查已完成的订单（状态3）
+  const completedOrders = ordersToCheck.filter(order => order.status === 3)
+
+  console.log(`检查 ${completedOrders.length} 个已完成订单的评价状态`)
+
+  for (const order of completedOrders) {
+    try {
+      // 如果订单有商品信息，检查第一个商品的评价状态
+      // 这样可以避免不传productId导致的数据异常
+      if (order.orderItems && order.orderItems.length > 0) {
+        const firstProduct = order.orderItems[0]
+        console.log(`检查订单 ${order.orderSn} 第一个商品 ${firstProduct.productId} 的评价状态`)
+        const hasReviewed = await reviewApi.checkOrderReviewed(order.orderSn, firstProduct.productId)
+        order.hasReviewed = hasReviewed
+        console.log(`订单 ${order.orderSn} 商品 ${firstProduct.productId} 评价状态检查结果: hasReviewed = ${hasReviewed}`)
+      } else {
+        // 如果没有商品信息，跳过评价状态检查，避免调用可能有问题的API
+        console.warn(`订单 ${order.orderSn} 没有商品信息，跳过评价状态检查`)
+        order.hasReviewed = false
+      }
+
+      // 不改变订单状态，保持原有的订单状态逻辑
+      // 评价状态通过 hasReviewed 字段来标识
+    } catch (error: any) {
+      console.error(`检查订单 ${order.orderSn} 评价状态失败:`, error)
+      order.hasReviewed = false
+    }
+  }
+}
+
 // 更新标签计数
 function updateTabCounts() {
-  const counts = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0 }
+  const counts = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, 'refund': 0 }
+
   orderList.value.forEach(order => {
     const statusKey = order.status.toString() as keyof typeof counts
     if (statusKey in counts) {
       counts[statusKey]++
+    }
+    // 统计有退款记录的订单
+    if (order.refundRecord) {
+      counts.refund++
     }
   })
 
@@ -273,16 +549,27 @@ function getStatusClass(status: number) {
     1: 'status-paid',
     2: 'status-shipped',
     3: 'status-completed',
-    4: 'status-cancelled'
+    4: 'status-cancelled',
+    5: 'status-reviewed'  // 新增已评价状态样式
   }
   return statusClasses[status as keyof typeof statusClasses] || ''
 }
 
 // 获取图片URL
 function getImageUrl(imagePath: string) {
-  if (!imagePath) return '/placeholder.jpg'
-  if (imagePath.startsWith('http')) return imagePath
-  return `http://localhost:9999${imagePath}`
+  return getProductImageUrl(imagePath)
+}
+
+// 图片加载成功
+function handleImageLoad(event: Event) {
+  // 图片加载成功处理
+}
+
+// 图片加载失败
+function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  // 设置默认图片
+  img.src = '/images/placeholder/product.png'
 }
 
 // 格式化时间
@@ -352,6 +639,53 @@ async function confirmReceive(orderSn: string) {
     }
   }
 }
+
+// 查看物流信息
+function viewDeliveryInfo(orderSn: string) {
+  const order = orderList.value.find(o => o.orderSn === orderSn)
+  if (order) {
+    deliveryDialog.orderSn = orderSn
+    deliveryDialog.orderStatus = order.status
+    deliveryDialog.visible = true
+  }
+}
+
+// 去评价
+function goToReview(orderSn: string) {
+  // 跳转到创建评价页面
+  router.push(`/create-review?orderSn=${orderSn}`)
+}
+
+// 查看订单评价
+function viewOrderReviews(orderSn: string) {
+  // 跳转到用户评价管理页面，并筛选该订单的评价
+  router.push(`/user/reviews?orderSn=${orderSn}`)
+}
+
+// 申请退货
+function applyRefund(orderSn: string) {
+  router.push({
+    path: '/refund/apply',
+    query: { orderSn }
+  })
+}
+
+// 查看退款记录
+function viewRefundRecord(orderSn: string) {
+  router.push('/user/refunds')
+}
+
+// 物流确认收货回调
+function handleDeliveryConfirmed() {
+  deliveryDialog.visible = false
+  loadOrders()
+  ElMessage.success('确认收货成功，订单已完成')
+}
+
+// 物流信息刷新回调
+function handleDeliveryRefreshed() {
+  // 可以在这里做一些额外的处理
+}
 </script>
 
 <style scoped>
@@ -367,6 +701,9 @@ async function confirmReceive(orderSn: string) {
   margin-bottom: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .page-title {
@@ -374,6 +711,22 @@ async function confirmReceive(orderSn: string) {
   color: #333;
   margin: 0;
   font-weight: 600;
+}
+
+.debug-info {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #666;
+}
+
+.no-items {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
 }
 
 /* 订单状态标签 */
@@ -519,6 +872,10 @@ async function confirmReceive(orderSn: string) {
 
 .status-cancelled {
   color: #999;
+}
+
+.status-reviewed {
+  color: #52c41a;
 }
 
 /* 订单商品 */

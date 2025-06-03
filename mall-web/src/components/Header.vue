@@ -34,6 +34,12 @@
                 </el-badge>
               </el-button>
               <el-divider direction="vertical" />
+              <el-button type="text" @click="goToUserFavorites">
+                <el-badge :value="favoriteCount" class="favorite-badge">
+                  <el-icon><Star /></el-icon> 收藏
+                </el-badge>
+              </el-button>
+              <el-divider direction="vertical" />
               <el-dropdown v-if="isLoggedIn">
                 <span class="user-profile">
                   {{ username }}
@@ -65,10 +71,11 @@
   </template>
 
   <script setup lang="ts">
-    import { ref, defineProps, onMounted } from 'vue'
+    import { ref, defineProps, onMounted, onUnmounted } from 'vue'
     import { useRouter } from 'vue-router'
-    import { ShoppingCart, ArrowDown } from '@element-plus/icons-vue'
-    import axios from 'axios';
+    import { ShoppingCart, ArrowDown, Star } from '@element-plus/icons-vue'
+    import axios from 'axios'
+    import { favoriteApi } from '../api/favorite'
 
     const props = defineProps({
       logoOnly: {
@@ -80,24 +87,67 @@
     const router = useRouter()
     const searchText = ref('')
     const cartCount = ref(0)
+    const favoriteCount = ref(0)
     const isLoggedIn = ref(false)
     const username = ref('用户名')
 
-    // 检查本地登录状态
-    onMounted(() => {
-      const token = localStorage.getItem('access_token')
+    // 加载收藏数量
+    const loadFavoriteCount = async () => {
+      if (isLoggedIn.value) {
+        try {
+          favoriteCount.value = await favoriteApi.getFavoritesCount()
+        } catch (error) {
+          console.error('加载收藏数量失败:', error)
+          favoriteCount.value = 0
+        }
+      } else {
+        favoriteCount.value = 0
+      }
+    }
+
+    // 检查登录状态的函数
+    const checkLoginStatus = async () => {
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token')
       const userInfo = localStorage.getItem('user_info')
       if (token && userInfo) {
         isLoggedIn.value = true
         try {
-          username.value = JSON.parse(userInfo).username || '用户'
+          const user = JSON.parse(userInfo)
+          username.value = user.username || user.nickname || '用户'
         } catch {
           username.value = '用户'
         }
+        // 登录后加载收藏数量
+        await loadFavoriteCount()
       } else {
         isLoggedIn.value = false
         username.value = '用户名'
+        favoriteCount.value = 0
       }
+    }
+
+    // 监听 localStorage 变化
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token' || e.key === 'token' || e.key === 'user_info') {
+        checkLoginStatus()
+      }
+    }
+
+    // 检查本地登录状态
+    onMounted(() => {
+      checkLoginStatus()
+      // 监听 localStorage 变化
+      window.addEventListener('storage', handleStorageChange)
+
+      // 监听自定义登录事件
+      window.addEventListener('userLogin', checkLoginStatus)
+      window.addEventListener('userLogout', checkLoginStatus)
+    })
+
+    onUnmounted(() => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('userLogin', checkLoginStatus)
+      window.removeEventListener('userLogout', checkLoginStatus)
     })
 
     const handleSearch = async () => {
@@ -131,12 +181,21 @@
     }
 
     const handleLogout = () => {
-      // 清除本地登录信息并跳转到登录页
+      // 清除本地登录信息
       localStorage.removeItem('access_token')
+      localStorage.removeItem('token')
+      localStorage.removeItem('refresh_token')
       localStorage.removeItem('username')
       localStorage.removeItem('user_info')
+
+      // 更新状态
       isLoggedIn.value = false
       username.value = '用户名'
+
+      // 触发退出事件，通知其他组件更新状态
+      window.dispatchEvent(new CustomEvent('userLogout'))
+
+      // 跳转到登录页
       router.push('/login')
     }
 
@@ -193,7 +252,8 @@
       gap: 15px;
     }
 
-    .cart-badge {
+    .cart-badge,
+    .favorite-badge {
       margin-right: 10px;
     }
 

@@ -1,12 +1,24 @@
 <template>
   <div class="wallet-page">
     <div class="container">
+      <!-- 页面头部 -->
+      <div class="page-header">
+        <el-button
+          class="back-btn"
+          @click="goBack"
+          :icon="ArrowLeft"
+          circle
+          size="large"
+        />
+        <h1 class="page-title">我的钱包</h1>
+      </div>
+
       <!-- 余额卡片 -->
       <div class="balance-card">
         <div class="balance-header">
           <div class="balance-title">
             <i class="icon-wallet"></i>
-            我的钱包
+            钱包余额
           </div>
           <div class="balance-actions">
             <el-button type="primary" size="small" @click="showRechargeDialog = true">
@@ -66,8 +78,8 @@
               <div class="transaction-title">{{ transaction.title }}</div>
               <div class="transaction-time">{{ formatTime(transaction.createTime) }}</div>
             </div>
-            <div class="transaction-amount" :class="{ income: transaction.type === 'income' }">
-              {{ transaction.type === 'income' ? '+' : '-' }}¥{{ (transaction.amount || 0).toFixed(2) }}
+            <div class="transaction-amount" :class="{ income: getTransactionType(transaction) === 'income' }">
+              {{ getTransactionType(transaction) === 'income' ? '+' : '-' }}¥{{ getTransactionAmount(transaction).toFixed(2) }}
             </div>
           </div>
         </div>
@@ -227,8 +239,8 @@
               <div class="record-title">{{ record.title }}</div>
               <div class="record-time">{{ formatTime(record.createTime) }}</div>
             </div>
-            <div class="record-amount" :class="{ income: record.type === 'income' }">
-              {{ record.type === 'income' ? '+' : '-' }}¥{{ (record.amount || 0).toFixed(2) }}
+            <div class="record-amount" :class="{ income: getTransactionType(record) === 'income' }">
+              {{ getTransactionType(record) === 'income' ? '+' : '-' }}¥{{ getTransactionAmount(record).toFixed(2) }}
             </div>
           </div>
         </div>
@@ -259,8 +271,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import axios from 'axios'
+
+const router = useRouter()
 
 // 数据定义
 const balanceInfo = ref({})
@@ -344,6 +360,11 @@ const changePasswordRules = {
   ]
 }
 
+// 返回上一页
+function goBack() {
+  router.go(-1)
+}
+
 // 页面初始化
 onMounted(async () => {
   await loadBalanceInfo()
@@ -378,10 +399,23 @@ async function checkPayPassword() {
 // 加载最近交易记录
 async function loadRecentTransactions() {
   try {
+    console.log('开始加载最近交易记录...')
     const response = await axios.get(`http://localhost:9999/payment-service/api/v1/payment/records?size=5`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
-    recentTransactions.value = response.data.data.records || []
+
+    console.log('最近交易记录API响应:', response.data)
+    console.log('最近交易数据结构:', response.data.data)
+
+    const records = response.data.data.records || response.data.data || []
+    console.log('最近交易记录数组:', records)
+
+    if (records.length > 0) {
+      console.log('最近交易第一条记录:', records[0])
+      console.log('最近交易记录字段:', Object.keys(records[0]))
+    }
+
+    recentTransactions.value = records
   } catch (error) {
     console.error('加载交易记录失败:', error)
     recentTransactions.value = []
@@ -538,10 +572,23 @@ async function handleChangePassword() {
 // 加载并显示交易记录
 async function loadAndShowPaymentRecords() {
   try {
+    console.log('开始加载交易记录...')
     const response = await axios.get(`http://localhost:9999/payment-service/api/v1/payment/records`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
-    paymentRecords.value = response.data.data.records || []
+
+    console.log('交易记录API响应:', response.data)
+    console.log('响应数据结构:', response.data.data)
+
+    const records = response.data.data.records || response.data.data || []
+    console.log('解析出的记录数组:', records)
+
+    if (records.length > 0) {
+      console.log('第一条记录详情:', records[0])
+      console.log('第一条记录的所有字段:', Object.keys(records[0]))
+    }
+
+    paymentRecords.value = records
     showPaymentRecords.value = true
   } catch (error) {
     console.error('加载交易记录失败:', error)
@@ -571,6 +618,37 @@ function formatTime(timeStr: string) {
   const date = new Date(timeStr)
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 }
+
+// 获取交易金额（兼容不同的字段名称）
+function getTransactionAmount(record: any) {
+  // 尝试不同的可能字段名称
+  const possibleFields = ['amount', 'payAmount', 'money', 'totalAmount', 'transactionAmount']
+
+  for (const field of possibleFields) {
+    if (record[field] !== undefined && record[field] !== null) {
+      const amount = Number(record[field])
+      if (!isNaN(amount)) {
+        console.log(`使用字段 ${field}，金额: ${amount}`)
+        return amount
+      }
+    }
+  }
+
+  console.log('未找到有效的金额字段，记录:', record)
+  return 0
+}
+
+// 获取交易类型（兼容不同的字段名称）
+function getTransactionType(record: any) {
+  // 检查可能的类型字段
+  if (record.type) return record.type
+  if (record.transactionType) return record.transactionType
+  if (record.payType) return record.payType
+
+  // 根据金额正负判断
+  const amount = getTransactionAmount(record)
+  return amount >= 0 ? 'income' : 'expense'
+}
 </script>
 
 <style scoped>
@@ -583,6 +661,35 @@ function formatTime(timeStr: string) {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* 页面头部 */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 0;
+}
+
+.back-btn {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.back-btn:hover {
+  background: #409eff;
+  border-color: #409eff;
+  color: #fff;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
 }
 
 /* 余额卡片 */

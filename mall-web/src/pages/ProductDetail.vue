@@ -60,9 +60,22 @@
       <div class="actions">
         <el-button type="primary" size="large" @click="buyNow">立即购买</el-button>
         <el-button size="large" icon="el-icon-shopping-cart-full" @click="addToCart">加入购物车</el-button>
-        <el-button size="large" icon="el-icon-star-off">加入收藏</el-button>
+        <FavoriteButton
+          :product-id="productDetail.id"
+          :show-count="true"
+          size="large"
+          @favorite-changed="onFavoriteChanged"
+        />
       </div>
     </div>
+
+    <!-- 商品评论区域 -->
+    <div v-if="productDetail && !error" class="product-reviews-section">
+      <el-divider />
+      <h3 class="section-title">商品评价</h3>
+      <ProductReviews :product-id="productDetail.id" ref="reviewsRef" />
+    </div>
+
     <div v-if="error" class="error">加载失败: {{ error }}</div>
   </div>
 </template>
@@ -71,6 +84,8 @@
 import { ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router' // 确保导入 useRouter
+import FavoriteButton from '../components/FavoriteButton.vue'
+import ProductReviews from '../components/ProductReviews.vue'
 
 const route = useRoute()
 const router = useRouter() // 初始化 router
@@ -209,6 +224,12 @@ function buyNow() {
   });
 }
 
+// 收藏状态变化处理
+function onFavoriteChanged(isFavorited: boolean) {
+  console.log('收藏状态变化:', isFavorited)
+  // 可以在这里添加其他逻辑，比如更新商品的收藏数量等
+}
+
 // 返回上一级页面的方法
 const goBack = () => {
   router.go(-1)
@@ -340,5 +361,20 @@ const goBack = () => {
 .error {
   color: red;
   margin-top: 20px;
+}
+
+.product-reviews-section {
+  margin-top: 40px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
 }
 </style>

@@ -15,7 +15,6 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
 const props = defineProps<{ banners: Array<{ id: number, title: string, imageUrl: string, redirect_url: string }> }>()
 const defaultImg = 'http://localhost:9999/product-service/search1.png'
 function getBannerImgUrl(url: string) {

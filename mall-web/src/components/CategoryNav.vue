@@ -1,41 +1,69 @@
 <template>
   <div class="category-nav">
-    <ul class="category-list">
-      <li v-for="category in categories" :key="category.id" class="main-category-block">
-        <div class="main-category-title" @click="navigateToCategory(category.id, $event)">
-          {{ category.name }}
+    <!-- 左侧分类列表 -->
+    <div class="main-categories" @mouseleave="hidePanelDelayed">
+      <template v-for="category in categories" :key="category.id">
+        <!-- 一级分类 -->
+        <div
+          class="main-category-item level-1"
+          :class="{ active: hoveredCategory?.id === category.id }"
+          @mouseenter="showSubCategories(category)"
+          @click="navigateToCategory(category.id, $event)"
+        >
+          <span class="category-name">{{ category.name }}</span>
+          <i class="arrow-icon" v-if="category.children && category.children.length">▶</i>
         </div>
-        <ul class="sub-category-list">
-          <li v-for="subCategory in category.children" :key="subCategory.id"
-              class="second-category-item"
-              @mouseenter="showThirdLevel(subCategory, $event)"
-              @mouseleave="leaveSecondCategory"
-              @click="navigateToCategory(subCategory.id, $event)">
-            <div class="second-category-content">
-              <span>{{ subCategory.name }}</span>
-              <i class="el-icon-arrow-right" v-if="subCategory.children && subCategory.children.length"></i>
-            </div>
-            <!-- 三级分类菜单 -->
-            <div
-              v-if="hoveredSubCategory && hoveredSubCategory.id === subCategory.id && subCategory.children && subCategory.children.length"
-              class="third-level-popover"
-              @mouseenter="mouseEnterThirdLevel"
-              @mouseleave="mouseLeaveThirdLevel"
-            >
-              <!-- 添加一个连接区域，确保鼠标可以顺畅地从二级分类移动到三级菜单 -->
-              <div class="menu-connector"></div>
 
-              <!-- 三级分类列表 -->
-              <ul class="third-level-list">
-                <li v-for="third in subCategory.children" :key="third.id" @click.stop="navigateToCategory(third.id, $event)">
-                  {{ third.name }}
-                </li>
-              </ul>
-            </div>
-          </li>
-        </ul>
-      </li>
-    </ul>
+        <!-- 二级分类 -->
+        <template v-if="category.children && category.children.length">
+          <div
+            v-for="subCategory in category.children"
+            :key="subCategory.id"
+            class="main-category-item level-2"
+            @click="navigateToCategory(subCategory.id, $event)"
+          >
+            <span class="category-name">{{ subCategory.name }}</span>
+            <i class="arrow-icon" v-if="subCategory.children && subCategory.children.length">▶</i>
+          </div>
+        </template>
+      </template>
+    </div>
+
+    <!-- 右侧二级三级分类弹出层 -->
+    <div
+      v-if="hoveredCategory && hoveredCategory.children && hoveredCategory.children.length"
+      class="sub-categories-panel"
+      @mouseenter="keepPanelOpen"
+      @mouseleave="hidePanelDelayed"
+    >
+      <div class="sub-categories-content">
+        <div
+          v-for="subCategory in hoveredCategory.children"
+          :key="subCategory.id"
+          class="sub-category-group"
+        >
+          <div
+            class="sub-category-title"
+            @click="navigateToCategory(subCategory.id, $event)"
+          >
+            {{ subCategory.name }}
+          </div>
+          <div
+            v-if="subCategory.children && subCategory.children.length"
+            class="third-categories"
+          >
+            <span
+              v-for="thirdCategory in subCategory.children"
+              :key="thirdCategory.id"
+              class="third-category-item"
+              @click="navigateToCategory(thirdCategory.id, $event)"
+            >
+              {{ thirdCategory.name }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -57,17 +85,19 @@ interface SubCategory {
 interface Category {
   id: number
   name: string
-  children: SubCategory[]
+  children?: SubCategory[]
 }
 
 const router = useRouter()
-const hoveredSubCategory = ref<SubCategory | null>(null)
 const categories = ref<Category[]>([])
+const hoveredCategory = ref<Category | null>(null)
+let hideTimer: number | null = null
 
 onMounted(async () => {
   try {
     const resp = await fetch('http://localhost:9999/product-service/api/v1/categories/tree')
     const result = await resp.json()
+    console.log('分类数据:', result)
     if (result.code === '000000' && Array.isArray(result.data)) {
       categories.value = result.data.map((cat: any) => ({
         id: cat.id,
@@ -81,116 +111,116 @@ onMounted(async () => {
           }))
         }))
       }))
+      console.log('处理后的分类:', categories.value)
+    } else {
+      // 如果API没有返回数据，使用备用数据
+      categories.value = [
+        {
+          id: 1,
+          name: '家用电器',
+          children: [
+            { id: 101, name: '大家电', children: [{ id: 1001, name: '冰箱' }, { id: 1002, name: '洗衣机' }, { id: 1003, name: '空调' }] },
+            { id: 102, name: '小家电', children: [{ id: 1004, name: '电饭煲' }, { id: 1005, name: '微波炉' }, { id: 1006, name: '豆浆机' }] }
+          ]
+        },
+        {
+          id: 2,
+          name: '手机通讯',
+          children: [
+            { id: 201, name: '手机', children: [{ id: 2001, name: '苹果' }, { id: 2002, name: '华为' }, { id: 2003, name: '小米' }] },
+            { id: 202, name: '配件', children: [{ id: 2004, name: '手机壳' }, { id: 2005, name: '充电器' }, { id: 2006, name: '耳机' }] }
+          ]
+        },
+        {
+          id: 3,
+          name: '服饰鞋包',
+          children: [
+            { id: 301, name: '女装', children: [{ id: 3001, name: '连衣裙' }, { id: 3002, name: '上衣' }, { id: 3003, name: '裤装' }] },
+            { id: 302, name: '男装', children: [{ id: 3004, name: 'T恤' }, { id: 3005, name: '衬衫' }, { id: 3006, name: '裤子' }] }
+          ]
+        },
+        {
+          id: 4,
+          name: '美妆个护',
+          children: [
+            { id: 401, name: '护肤', children: [{ id: 4001, name: '洁面' }, { id: 4002, name: '爽肤水' }, { id: 4003, name: '面霜' }] },
+            { id: 402, name: '彩妆', children: [{ id: 4004, name: '口红' }, { id: 4005, name: '粉底' }, { id: 4006, name: '眼影' }] }
+          ]
+        }
+      ]
     }
   } catch (e) {
-    // 可以根据需要添加错误处理
     console.error('获取分类失败', e)
+    // 网络错误时也使用备用数据
+    categories.value = [
+      {
+        id: 1,
+        name: '家用电器',
+        children: [
+          { id: 101, name: '大家电', children: [{ id: 1001, name: '冰箱' }, { id: 1002, name: '洗衣机' }, { id: 1003, name: '空调' }] },
+          { id: 102, name: '小家电', children: [{ id: 1004, name: '电饭煲' }, { id: 1005, name: '微波炉' }, { id: 1006, name: '豆浆机' }] }
+        ]
+      },
+      {
+        id: 2,
+        name: '手机通讯',
+        children: [
+          { id: 201, name: '手机', children: [{ id: 2001, name: '苹果' }, { id: 2002, name: '华为' }, { id: 2003, name: '小米' }] },
+          { id: 202, name: '配件', children: [{ id: 2004, name: '手机壳' }, { id: 2005, name: '充电器' }, { id: 2006, name: '耳机' }] }
+        ]
+      },
+      {
+        id: 3,
+        name: '服饰鞋包',
+        children: [
+          { id: 301, name: '女装', children: [{ id: 3001, name: '连衣裙' }, { id: 3002, name: '上衣' }, { id: 3003, name: '裤装' }] },
+          { id: 302, name: '男装', children: [{ id: 3004, name: 'T恤' }, { id: 3005, name: '衬衫' }, { id: 3006, name: '裤子' }] }
+        ]
+      },
+      {
+        id: 4,
+        name: '美妆个护',
+        children: [
+          { id: 401, name: '护肤', children: [{ id: 4001, name: '洁面' }, { id: 4002, name: '爽肤水' }, { id: 4003, name: '面霜' }] },
+          { id: 402, name: '彩妆', children: [{ id: 4004, name: '口红' }, { id: 4005, name: '粉底' }, { id: 4006, name: '眼影' }] }
+        ]
+      }
+    ]
   }
 })
 
-// 当前激活的二级分类
-const activeSubCategory = ref<SubCategory | null>(null)
-// 鼠标是否在三级菜单上
-const isMouseOverThirdLevel = ref(false)
-// 定时器ID，用于清除定时器
-let hideTimer: number | null = null
-let showTimer: number | null = null
-// 上一次显示的二级分类ID
-let lastSubCategoryId: number | null = null
-
-// 显示三级分类
-function showThirdLevel(subCategory: SubCategory, _event: MouseEvent) {
-  // 清除之前的隐藏定时器，防止菜单在用户移动到三级菜单之前就隐藏
+// 显示子分类
+function showSubCategories(category: Category) {
   if (hideTimer) {
     clearTimeout(hideTimer)
     hideTimer = null
   }
-
-  // 如果是同一个二级分类，立即显示
-  if (lastSubCategoryId === subCategory.id) {
-    hoveredSubCategory.value = subCategory
-    activeSubCategory.value = subCategory
-    return
-  }
-
-  // 清除之前的显示定时器
-  if (showTimer) {
-    clearTimeout(showTimer)
-  }
-
-  // 立即显示三级菜单，不再使用延迟
-  // 这样可以确保用户移动到二级分类时立即看到三级菜单
-  hoveredSubCategory.value = subCategory
-  activeSubCategory.value = subCategory
-  lastSubCategoryId = subCategory.id
-
-  // 设置鼠标不在三级菜单上的标志
-  isMouseOverThirdLevel.value = false
+  hoveredCategory.value = category
 }
 
-// 鼠标进入三级菜单
-function mouseEnterThirdLevel() {
-  isMouseOverThirdLevel.value = true
-
-  // 清除所有定时器
+// 保持面板打开
+function keepPanelOpen() {
   if (hideTimer) {
     clearTimeout(hideTimer)
     hideTimer = null
   }
-
-  if (showTimer) {
-    clearTimeout(showTimer)
-    showTimer = null
-  }
-
-  // 确保当前悬停的二级分类保持激活状态
-  if (activeSubCategory.value) {
-    hoveredSubCategory.value = activeSubCategory.value
-  }
 }
 
-// 鼠标离开三级菜单
-function mouseLeaveThirdLevel() {
-  isMouseOverThirdLevel.value = false
-  // 延迟一段时间后再隐藏，给用户足够的时间点击
-  if (hideTimer) {
-    clearTimeout(hideTimer)
-  }
+// 延迟隐藏面板
+function hidePanelDelayed() {
   hideTimer = setTimeout(() => {
-    if (!isMouseOverThirdLevel.value) {
-      hoveredSubCategory.value = null
-      lastSubCategoryId = null
-    }
-  }, 800) as unknown as number // 增加延迟时间到800ms，给用户更多时间操作
-}
-
-// 鼠标离开二级分类
-function leaveSecondCategory() {
-  // 延迟隐藏，给用户更多时间移动到三级菜单
-  if (hideTimer) {
-    clearTimeout(hideTimer)
-  }
-
-  // 增加延迟时间到1000ms (1秒)，给用户足够的时间移动到三级菜单
-  hideTimer = setTimeout(() => {
-    // 只有当鼠标不在三级菜单上时，才隐藏三级菜单
-    if (!isMouseOverThirdLevel.value) {
-      hoveredSubCategory.value = null
-      lastSubCategoryId = null
-    }
-  }, 1000) as unknown as number
+    hoveredCategory.value = null
+  }, 300) as unknown as number
 }
 
 // 导航到分类页面
 function navigateToCategory(categoryId: number, e?: MouseEvent) {
-  // 阻止事件冒泡，防止触发父元素的点击事件
   if (e) {
     e.stopPropagation()
   }
 
   console.log('导航到分类:', categoryId)
 
-  // 导航到搜索结果页面，并传递分类ID
   router.push({
     path: '/SearchResults',
     query: { categoryId: categoryId.toString() }
@@ -200,169 +230,169 @@ function navigateToCategory(categoryId: number, e?: MouseEvent) {
 
 <style scoped>
 .category-nav {
-  width: 250px; /* 减小宽度，让轮播图占比更大 */
-  min-width: 250px;
-  font-size: 14px;
-  line-height: 1.5;
-  background: #fff;
-  border-radius: 8px 0 0 8px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-  padding: 8px 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  box-sizing: border-box;
-  height: 400px;
   position: relative;
-  z-index: 100; /* 提高z-index确保不被轮播图遮挡 */
-  overflow-y: auto; /* 允许垂直滚动 */
-  overflow-x: hidden; /* 防止水平溢出 */
-}
-.main-category-title {
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-  padding: 6px 0 6px 24px;
-  cursor: pointer;
-  transition: color 0.2s;
+  width: 100px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: visible;
+  height: 400px;
 }
 
-.main-category-title:hover {
-  color: #409EFF;
-}
-.category-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.main-category-block {
-  margin-bottom: 8px;
-}
-.sub-category-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 24px;
-  /* 确保二级分类列表有足够的空间 */
-  width: 100%;
-  box-sizing: border-box;
-  position: relative; /* 为三级菜单的定位提供参考 */
-}
-.second-category-item {
-  font-size: 14px;
-  color: #444;
-  padding: 8px 12px 8px 0; /* 增加内边距，扩大点击区域 */
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.25s ease; /* 平滑过渡效果 */
-  position: relative; /* 重要：作为三级菜单的定位参考 */
-  /* 确保二级分类项有足够的空间显示三级菜单 */
-  min-height: 24px;
-  width: 100%; /* 确保宽度占满父元素 */
-  margin-bottom: 2px; /* 增加项目间距 */
+/* 左侧主分类 */
+.main-categories {
+  background: #fff;
+  border-radius: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  /* 隐藏滚动条但保持滚动功能 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
-/* 添加一个伪元素，在二级分类项下方创建一个连接区域，使鼠标移动更容易 */
-.second-category-item::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -10px; /* 向下延伸10px */
-  width: 100%;
-  height: 10px;
-  background: transparent; /* 透明背景 */
-  z-index: 10;
+.main-categories::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
-.second-category-content {
+.main-category-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-left: 4px; /* 左侧增加内边距 */
-}
-
-.second-category-item:hover {
-  background: #e6f7ff; /* 更明显的背景色 */
-  color: #1890ff; /* 更鲜明的文字颜色 */
-  font-weight: 500; /* 稍微加粗 */
-  padding-left: 4px; /* 悬停时增加左侧内边距，产生移动效果 */
-}
-.third-level-popover {
-  position: absolute; /* 使用绝对定位，相对于父元素 */
-  left: 0; /* 从左侧开始 */
-  top: 100%; /* 显示在二级分类的下方 */
-  width: 100%; /* 宽度占满整个导航栏 */
-  background: #f0f5ff; /* 更改为浅蓝色背景，增加对比度 */
-  border-radius: 6px; /* 增加圆角 */
-  box-shadow: 0 4px 16px rgba(0,0,0,.15); /* 增强阴影效果 */
-  z-index: 1000; /* 确保在最上层 */
-  padding: 10px; /* 增加内边距 */
-  /* 确保三级菜单不会被轮播图遮挡 */
-  max-height: 220px; /* 增加高度 */
-  overflow-y: auto;
-  margin-top: 0; /* 减少与二级分类的距离，使其更容易移动到 */
-  box-sizing: border-box;
-  transition: all 0.3s ease; /* 增强过渡效果 */
-  border: 1px solid #e0e9ff; /* 添加边框 */
-  /* 添加一个透明的连接区域，使鼠标移动更容易 */
-  clip-path: polygon(
-    0% -20px,  /* 左上角向上延伸20px */
-    100% -20px, /* 右上角向上延伸20px */
-    100% 100%, /* 右下角 */
-    0% 100%    /* 左下角 */
-  );
-}
-
-/* 移除三级分类标题样式 */
-
-.third-level-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 每行显示3个项目 */
-  gap: 6px; /* 增加间距，便于区分 */
-  justify-content: center; /* 居中对齐 */
-  align-items: center; /* 垂直居中 */
-  width: 100%; /* 占满容器宽度 */
-}
-
-.third-level-popover li {
-  padding: 8px 12px;
-  white-space: nowrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: all 0.2s;
-  border-radius: 4px;
-  /* 增加点击区域 */
-  display: inline-block;
-  box-sizing: border-box;
+  position: relative;
+}
+
+/* 一级分类样式 */
+.main-category-item.level-1 {
   background: #fff;
-  border: 1px solid #eee;
-  font-size: 13px; /* 稍微增加字体大小，提高可读性 */
-  margin: 4px; /* 增加间距，便于点击 */
-  min-width: 70px; /* 增加最小宽度，扩大点击区域 */
-  text-align: center; /* 文本居中 */
-  user-select: none; /* 防止文本被选中 */
+  font-weight: 600;
 }
 
-.third-level-popover li:hover {
-  background: #e6f7ff;
-  color: #409EFF;
-  border-color: #409EFF;
-  transform: scale(1.05); /* 轻微放大，提供更好的视觉反馈 */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1); /* 添加阴影效果 */
+.main-category-item.level-1:hover,
+.main-category-item.level-1.active {
+  background-color: #ff6b35;
+  color: #fff;
 }
 
+/* 二级分类样式 */
+.main-category-item.level-2 {
+  padding-left: 20px;
+  background: #f8f9fa;
+  font-size: 13px;
+  font-weight: 400;
+  color: #666;
+}
 
+.main-category-item.level-2:hover {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
 
-/* 连接区域样式 */
-.menu-connector {
+.main-category-item:last-child {
+  border-bottom: none;
+}
+
+.category-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* 右侧子分类弹出层 */
+.sub-categories-panel {
   position: absolute;
-  top: -15px; /* 向上延伸15px */
-  left: 0;
-  width: 100%;
-  height: 15px;
-  background: transparent; /* 透明背景 */
-  z-index: 999; /* 确保在最上层 */
+  left: 100px;
+  top: 0;
+  width: 600px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.sub-categories-content {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.sub-category-group {
+  margin-bottom: 20px;
+}
+
+.sub-category-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+  cursor: pointer;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  transition: color 0.2s;
+}
+
+.sub-category-title:hover {
+  color: #ff6b35;
+}
+
+.third-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.third-category-item {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #666;
+  background: #f8f8f8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.third-category-item:hover {
+  background: #ff6b35;
+  color: #fff;
+}
+
+/* 响应式调整 */
+@media (max-width: 1200px) {
+  .sub-categories-panel {
+    width: 500px;
+  }
+
+  .sub-categories-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .category-nav {
+    width: 100%;
+  }
+
+  .sub-categories-panel {
+    left: 0;
+    width: 100%;
+    position: fixed;
+    top: 60px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
 }
 </style>
