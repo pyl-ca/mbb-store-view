@@ -315,9 +315,19 @@ const categoryOptions = computed(() => {
   return props.categories
 })
 
-// 上传配置
-const uploadUrl = 'http://localhost:9999/product-service/api/v1/upload/image'
-const detailUploadUrl = 'http://localhost:9999/product-service/api/v1/upload/product/detail'
+// 上传配置 - 根据环境动态设置
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
+// 🔧 修复：使用正确的后端接口路径
+const uploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/image`
+const detailUploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/product/detail`
+
+// 🔍 调试信息
+console.log('🔧 ProductForm 上传配置:')
+console.log('🔧 API_BASE_URL:', API_BASE_URL)
+console.log('🔧 主图上传URL:', uploadUrl)
+console.log('🔧 详情图上传URL:', detailUploadUrl)
+console.log('🔧 环境变量 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`
 }))
@@ -376,17 +386,56 @@ function updateDetailImageList() {
 
 // 更新SKU数据
 function updateSkuData() {
+  // 处理规格列表中的图片路径
+  const processedSpecList = (props.productData?.specList || []).map((spec: any) => ({
+    ...spec,
+    values: (spec.values || []).map((value: any) => ({
+      ...value,
+      image: value.image ? getImageUrl(value.image) : value.image
+    }))
+  }))
+
+  // 处理SKU列表中的图片路径
+  const processedSkuList = (props.productData?.skuList || []).map((sku: any) => ({
+    ...sku,
+    image: sku.image ? getImageUrl(sku.image) : sku.image
+  }))
+
   skuData.value = {
-    specList: props.productData?.specList || [],
-    skuList: props.productData?.skuList || []
+    specList: processedSpecList,
+    skuList: processedSkuList
   }
 }
 
-// 获取图片URL
+// 获取图片URL - 用于显示图片
 function getImageUrl(imagePath: string) {
+  console.log('🔍 ProductForm获取图片URL，原始路径:', imagePath)
+
   if (!imagePath) return ''
-  if (imagePath.startsWith('http')) return imagePath
-  return `http://localhost:9999/static${imagePath}`
+  if (imagePath.startsWith('http')) {
+    console.log('✅ 已是完整URL:', imagePath)
+    return imagePath
+  }
+
+  // 使用环境变量配置的API基础URL
+  const baseUrl = API_BASE_URL
+
+  // 兼容不同的路径格式
+  let fullUrl = ''
+
+  if (imagePath.startsWith('/images/product/')) {
+    // 标准格式：/images/product/uuid.jpg
+    fullUrl = `${baseUrl}/product-service/static${imagePath}`
+  } else if (imagePath.startsWith('/images/')) {
+    // 当前后端返回格式：/images/20250610/uuid.png
+    fullUrl = `${baseUrl}/product-service/static${imagePath}`
+  } else {
+    // 其他格式，默认添加 /product-service/static/ 前缀
+    fullUrl = `${baseUrl}/product-service/static/${imagePath}`
+  }
+
+  console.log('🔗 ProductForm生成的显示URL:', fullUrl)
+  return fullUrl
 }
 
 // 图片上传前验证
@@ -407,22 +456,67 @@ function beforeImageUpload(file: any) {
 
 // 主图上传成功
 function handleImageSuccess(response: any) {
-  if (response.code === '000000') {
-    form.image = response.data.url || response.data.filePath
+  console.log('🔍 主图上传响应:', response)
+  console.log('🔍 响应码类型:', typeof response.code, '值:', response.code)
+
+  // 兼容多种成功状态码格式
+  const isSuccess = response.code === '000000' ||
+                   response.code === 200 ||
+                   response.code === '200' ||
+                   response.success === true
+
+  if (isSuccess) {
+    // 根据文档，优先使用 relativePath 或 url 字段
+    let imagePath = response.data?.relativePath || response.data?.url || response.data?.fullUrl || response.data?.filePath
+
+    console.log('🔍 后端返回的路径:', imagePath)
+
+    if (imagePath) {
+      // 🔧 关键修复：只保存相对路径到数据库，不保存完整URL
+      console.log('🔧 保存相对路径到表单:', imagePath)
+
+      // 只保存相对路径，如：/images/product/uuid文件名.jpg
+      form.image = imagePath
+    }
+
+    console.log('✅ 主图上传成功，存储路径:', form.image)
     ElMessage.success('图片上传成功')
   } else {
-    ElMessage.error(response.message || '图片上传失败')
+    console.error('❌ 主图上传失败:', response)
+    ElMessage.error(response.message || response.msg || '图片上传失败')
   }
 }
 
 // 详情图片上传成功
 function handleDetailImageSuccess(response: any) {
-  if (response.code === '000000') {
-    const imageUrl = response.data.url || response.data.filePath
-    form.detailImages.push(imageUrl)
+  console.log('🔍 详情图片上传响应:', response)
+  console.log('🔍 响应码类型:', typeof response.code, '值:', response.code)
+
+  // 兼容多种成功状态码格式
+  const isSuccess = response.code === '000000' ||
+                   response.code === 200 ||
+                   response.code === '200' ||
+                   response.success === true
+
+  if (isSuccess) {
+    // 根据文档，优先使用 relativePath 或 url 字段
+    let imagePath = response.data?.relativePath || response.data?.url || response.data?.fullUrl || response.data?.filePath
+
+    console.log('🔍 详情图片后端返回路径:', imagePath)
+
+    if (imagePath) {
+      // 🔧 关键修复：只保存相对路径到数据库，不保存完整URL
+      console.log('🔧 详情图片保存相对路径:', imagePath)
+
+      // 只保存相对路径，如：/images/product/uuid文件名.jpg
+      form.detailImages.push(imagePath)
+    }
+
+    console.log('✅ 详情图片上传成功')
     ElMessage.success('图片上传成功')
   } else {
-    ElMessage.error(response.message || '图片上传失败')
+    console.error('❌ 详情图片上传失败:', response)
+    ElMessage.error(response.message || response.msg || '图片上传失败')
   }
 }
 
@@ -455,8 +549,8 @@ async function handleSubmit() {
     }
 
     const url = isEdit.value
-      ? `http://localhost:9999/product-service/api/v1/admin/products/${form.id}`
-      : 'http://localhost:9999/product-service/api/v1/admin/products'
+      ? `/product-service/api/v1/admin/products/${form.id}`
+      : '/product-service/api/v1/admin/products'
 
     const method = isEdit.value ? 'put' : 'post'
 

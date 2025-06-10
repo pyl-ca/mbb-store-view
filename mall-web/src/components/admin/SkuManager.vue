@@ -195,8 +195,9 @@ const emit = defineEmits<{
 const specList = ref<any[]>([])
 const skuList = ref<any[]>([])
 
-// 上传配置
-const uploadUrl = 'http://localhost:9999/product-service/api/v1/upload/image'
+// 上传配置 - 根据环境动态设置
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
+const uploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/image`
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`
 }))
@@ -341,9 +342,32 @@ function removeSku(index: number) {
 
 // 获取图片URL
 function getImageUrl(imagePath: string) {
+  console.log('🔍 SkuManager获取图片URL，原始路径:', imagePath)
+
   if (!imagePath) return ''
-  if (imagePath.startsWith('http')) return imagePath
-  return `http://localhost:9999/static${imagePath}`
+  if (imagePath.startsWith('http')) {
+    console.log('✅ 已是完整URL:', imagePath)
+    return imagePath
+  }
+
+  // 使用环境变量配置的API基础URL
+  const baseUrl = API_BASE_URL
+
+  // 如果是相对路径，拼接完整URL
+  let fullUrl = ''
+  if (imagePath.startsWith('/static/')) {
+    // 如果已经包含 /static/ 前缀，直接拼接
+    fullUrl = `${baseUrl}${imagePath}`
+  } else if (imagePath.startsWith('/')) {
+    // 如果是以 / 开头的路径，添加 /static 前缀
+    fullUrl = `${baseUrl}/static${imagePath}`
+  } else {
+    // 如果是相对路径，添加 /static/ 前缀
+    fullUrl = `${baseUrl}/static/${imagePath}`
+  }
+
+  console.log('🔗 SkuManager生成的完整URL:', fullUrl)
+  return fullUrl
 }
 
 // 图片上传前验证
@@ -364,21 +388,67 @@ function beforeImageUpload(file: any) {
 
 // 规格值图片上传成功
 function handleValueImageSuccess(response: any, specIndex: number, valueIndex: number) {
-  if (response.code === '000000') {
-    specList.value[specIndex].values[valueIndex].image = response.data.url || response.data.filePath
+  console.log('🔍 规格值图片上传响应:', response)
+
+  // 兼容多种成功状态码格式
+  const isSuccess = response.code === '000000' ||
+                   response.code === 200 ||
+                   response.code === '200' ||
+                   response.success === true
+
+  if (isSuccess) {
+    let imageUrl = response.data?.url || response.data?.fullUrl || response.data?.relativePath || response.data?.filePath
+
+    // 根据网关配置，静态资源应该通过 /static/** 路径访问
+    if (imageUrl && imageUrl.startsWith('http')) {
+      // 提取文件名
+      const urlParts = imageUrl.split('/')
+      const filename = urlParts[urlParts.length - 1]
+
+      // 转换为静态资源路径
+      imageUrl = `http://39.107.74.208:9999/static/images/product/${filename}`
+      console.log('🔧 规格值图片转换为静态资源路径:', imageUrl)
+    }
+
+    specList.value[specIndex].values[valueIndex].image = imageUrl
+    console.log('✅ 规格值图片上传成功，存储路径:', imageUrl)
     ElMessage.success('图片上传成功')
   } else {
-    ElMessage.error(response.message || '图片上传失败')
+    console.error('❌ 规格值图片上传失败:', response)
+    ElMessage.error(response.message || response.msg || '图片上传失败')
   }
 }
 
 // SKU图片上传成功
 function handleSkuImageSuccess(response: any, skuIndex: number) {
-  if (response.code === '000000') {
-    skuList.value[skuIndex].image = response.data.url || response.data.filePath
+  console.log('🔍 SKU图片上传响应:', response)
+
+  // 兼容多种成功状态码格式
+  const isSuccess = response.code === '000000' ||
+                   response.code === 200 ||
+                   response.code === '200' ||
+                   response.success === true
+
+  if (isSuccess) {
+    let imageUrl = response.data?.url || response.data?.fullUrl || response.data?.relativePath || response.data?.filePath
+
+    // 根据网关配置，静态资源应该通过 /static/** 路径访问
+    if (imageUrl && imageUrl.startsWith('http')) {
+      // 提取文件名
+      const urlParts = imageUrl.split('/')
+      const filename = urlParts[urlParts.length - 1]
+
+      // 转换为静态资源路径
+      imageUrl = `http://39.107.74.208:9999/static/images/product/${filename}`
+      console.log('🔧 SKU图片转换为静态资源路径:', imageUrl)
+    }
+
+    skuList.value[skuIndex].image = imageUrl
+    console.log('✅ SKU图片上传成功，存储路径:', imageUrl)
     ElMessage.success('图片上传成功')
   } else {
-    ElMessage.error(response.message || '图片上传失败')
+    console.error('❌ SKU图片上传失败:', response)
+    ElMessage.error(response.message || response.msg || '图片上传失败')
   }
 }
 </script>

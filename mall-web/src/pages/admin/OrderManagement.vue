@@ -161,7 +161,7 @@ async function loadOrders() {
 
     console.log('订单管理-发送的查询参数:', params)
 
-    const response = await axios.get('http://localhost:9999/order-service/api/v1/orders/admin/all', {
+    const response = await axios.get('/order-service/api/v1/orders/admin/all', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })

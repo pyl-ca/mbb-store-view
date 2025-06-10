@@ -171,7 +171,7 @@ async function loadOrderInfo() {
       return
     }
 
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/orders/${orderSn}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     orderInfo.value = response.data.data
@@ -191,7 +191,7 @@ async function loadOrderInfo() {
 // 加载用户余额
 async function loadUserBalance() {
   try {
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/balance`, {
+    const response = await axios.get(`/payment-service/api/v1/balance`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     userBalance.value = response.data.data.availableBalance
@@ -246,7 +246,7 @@ async function confirmPayment() {
 
   try {
     const response = await axios.post(
-      `http://localhost:9999/payment-service/api/v1/payment/unified-pay`,
+      `/payment-service/api/v1/payment/unified-pay`,
       {
         orderSn: orderInfo.value.orderSn,
         payAmount: orderInfo.value.payAmount,
@@ -280,7 +280,7 @@ async function processThirdPartyPayment() {
 
   try {
     const response = await axios.post(
-      `http://localhost:9999/payment-service/api/v1/payment/unified-pay`,
+      `/payment-service/api/v1/payment/unified-pay`,
       {
         orderSn: orderInfo.value.orderSn,
         payAmount: orderInfo.value.payAmount,
@@ -324,7 +324,7 @@ function startPaymentStatusPolling() {
   const pollInterval = setInterval(async () => {
     try {
       const response = await axios.get(
-        `http://localhost:9999/order-service/api/v1/orders/${orderInfo.value.orderSn}`,
+        `/order-service/api/v1/orders/${orderInfo.value.orderSn}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
         }

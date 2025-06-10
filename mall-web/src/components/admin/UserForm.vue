@@ -123,6 +123,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { adminUserApi } from '../../api/admin-user'
 import axios from 'axios'
 import type { AdminUser, CreateUserRequest, UpdateUserRequest, Role } from '../../types/admin-user'
+import { API_BASE_URL } from '../../api/config'
 
 interface Props {
   visible: boolean
@@ -174,9 +175,14 @@ const avatarUrl = computed(() => {
   }
 
   // 如果是相对路径，拼接基础URL
-  const fullUrl = form.avatar.startsWith('/')
-    ? `http://localhost:9999${form.avatar}`
-    : `http://localhost:9999/${form.avatar}`
+  let fullUrl = ''
+  if (form.avatar.startsWith('/uploads/')) {
+    fullUrl = `${API_BASE_URL}/user-service${form.avatar}`
+  } else if (form.avatar.startsWith('/')) {
+    fullUrl = `${API_BASE_URL}${form.avatar}`
+  } else {
+    fullUrl = `${API_BASE_URL}/user-service/uploads/${form.avatar}`
+  }
 
   console.log('拼接后的URL:', fullUrl)
   return fullUrl
@@ -320,7 +326,7 @@ async function handleFileChange(event: Event) {
     // 发送PUT请求上传头像
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
     const response = await axios.put(
-      'http://localhost:9999/user-service/api/v1/profile/avatar',
+      '/user-service/api/v1/profile/avatar',
       formData,
       {
         headers: {

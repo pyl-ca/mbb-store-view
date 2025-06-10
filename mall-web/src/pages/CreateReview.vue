@@ -234,7 +234,7 @@ const loadOrderInfo = async (orderSn: string) => {
   loading.value = true
   try {
     // 获取订单详情
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/orders/${orderSn}`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
         'X-User-Id': localStorage.getItem('userId') || ''
@@ -332,7 +332,7 @@ const getProductImage = (image: string) => {
   if (!image) return '/images/placeholder.jpg'
   if (image.startsWith('http')) return image
   // 修正图片路径：使用正确的静态资源路径
-  return `http://localhost:9999/static${image}`
+  return `/static${image}`
 }
 
 // 文件上传成功

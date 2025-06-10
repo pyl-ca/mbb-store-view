@@ -129,7 +129,7 @@ async function loadDeliveryInfo() {
   try {
     const token = localStorage.getItem('token') || localStorage.getItem('access_token')
     const response = await axios.get(
-      `http://localhost:9999/order-service/api/v1/delivery/order/${props.orderSn}`,
+      `/order-service/api/v1/delivery/order/${props.orderSn}`,
       {
         headers: { Authorization: `Bearer ${token}` }
       }
@@ -170,7 +170,7 @@ async function confirmReceive() {
     const token = localStorage.getItem('token') || localStorage.getItem('access_token')
 
     await axios.post(
-      `http://localhost:9999/order-service/api/v1/delivery/confirm/${props.orderSn}`,
+      `/order-service/api/v1/delivery/confirm/${props.orderSn}`,
       {},
       {
         headers: {

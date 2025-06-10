@@ -22,6 +22,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 interface Category {
   id: number
@@ -34,8 +35,8 @@ const categories = ref<Category[]>([])
 
 onMounted(async () => {
   try {
-    const resp = await fetch('http://localhost:9999/product-service/api/v1/categories/tree')
-    const result = await resp.json()
+    const resp = await axios.get('/product-service/api/v1/categories/tree')
+    const result = resp.data
     if (result.code === '000000' && Array.isArray(result.data)) {
       categories.value = result.data.map((cat: any) => ({
         id: cat.id,

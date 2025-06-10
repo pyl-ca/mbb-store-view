@@ -133,8 +133,8 @@
               <el-image
                 v-for="(image, index) in review.images"
                 :key="index"
-                :src="image"
-                :preview-src-list="review.images"
+                :src="getReviewImageUrl(image)"
+                :preview-src-list="review.images.map(img => getReviewImageUrl(img))"
                 :initial-index="index"
                 fit="cover"
                 class="review-image"
@@ -229,6 +229,7 @@ import { ElMessage } from 'element-plus'
 import { reviewApi } from '../api/review'
 import ReplyDialog from './ReplyDialog.vue'
 import type { Review, Reply, ReviewFilter, ReviewStats } from '../types/review'
+import { getReviewImageUrl } from '../utils/imageUtils'
 
 interface Props {
   productId: number

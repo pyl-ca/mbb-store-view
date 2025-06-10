@@ -99,7 +99,7 @@ async function testQuery() {
     lastParams.value = { ...params }
     console.log('发送查询参数:', params)
 
-    const response = await axios.get('http://localhost:9999/order-service/api/v1/orders/admin/all', {
+    const response = await axios.get('/order-service/api/v1/orders/admin/all', {
       params,
       headers: { 
         Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` 

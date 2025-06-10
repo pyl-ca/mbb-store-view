@@ -158,7 +158,7 @@ async function loadCoupons() {
     if (filterForm.type !== undefined) params.type = filterForm.type
     if (filterForm.status !== undefined) params.status = filterForm.status
 
-    const response = await axios.get('http://localhost:9999/marketing-service/api/v1/coupons/admin/list', {
+    const response = await axios.get('/marketing-service/api/v1/coupons/admin/list', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -210,7 +210,7 @@ async function toggleStatus(coupon: any) {
     })
 
     const newStatus = coupon.status === 3 ? 1 : 3
-    await axios.put(`http://localhost:9999/marketing-service/api/v1/coupons/${coupon.id}/status`, 
+    await axios.put(`/marketing-service/api/v1/coupons/${coupon.id}/status`, 
       { status: newStatus },
       { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` } }
     )
@@ -232,7 +232,7 @@ async function handleDelete(coupon: any) {
       type: 'warning'
     })
 
-    await axios.delete(`http://localhost:9999/marketing-service/api/v1/coupons/${coupon.id}`, {
+    await axios.delete(`/marketing-service/api/v1/coupons/${coupon.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 

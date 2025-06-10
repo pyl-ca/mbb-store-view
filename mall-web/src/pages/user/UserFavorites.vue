@@ -61,7 +61,7 @@
 
           <div class="product-image" @click="goToProduct(item.productId)">
             <el-image
-              :src="item.productImage"
+              :src="getProductImageUrl(item.productImage)"
               :alt="item.productName"
               fit="cover"
               class="image"
@@ -124,9 +124,11 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Refresh, Picture } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { favoriteApi } from '../../api/favorite'
 import type { FavoriteItem } from '../../types/favorite'
+import { getProductImageUrl } from '../../utils/imageUtils'
 
 const router = useRouter()
 
@@ -321,7 +323,7 @@ async function addToCart(item: FavoriteItem) {
 
     // 获取商品的默认SKU（这里简化处理，实际可能需要让用户选择规格）
     const skuResponse = await axios.get(
-      `http://localhost:9999/product-service/api/specs/product/${item.productId}/sku-list`
+      `/product-service/api/specs/product/${item.productId}/sku-list`
     )
 
     const skuList = skuResponse.data
@@ -335,7 +337,7 @@ async function addToCart(item: FavoriteItem) {
 
     // 调用加入购物车API
     await axios.post(
-      'http://localhost:9999/cart-service/api/cart/add',
+      '/cart-service/api/cart/add',
       null,
       {
         params: {

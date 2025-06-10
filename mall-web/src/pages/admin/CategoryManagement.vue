@@ -276,7 +276,7 @@ onMounted(() => {
 async function loadCategories() {
   loading.value = true
   try {
-    const response = await axios.get('http://localhost:9999/product-service/api/v1/admin/categories/tree', {
+    const response = await axios.get('/product-service/api/v1/admin/categories/tree', {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -331,8 +331,8 @@ async function handleSubmit() {
     submitLoading.value = true
 
     const url = isEdit.value
-      ? `http://localhost:9999/product-service/api/v1/admin/categories/${form.id}`
-      : 'http://localhost:9999/product-service/api/v1/admin/categories'
+      ? `/product-service/api/v1/admin/categories/${form.id}`
+      : '/product-service/api/v1/admin/categories'
     
     const method = isEdit.value ? 'put' : 'post'
     
@@ -381,7 +381,7 @@ async function toggleShowStatus(category: any, cascade: boolean = false) {
       dangerouslyUseHTMLString: false
     })
 
-    const url = `http://localhost:9999/product-service/api/v1/admin/categories/${category.id}/show?isShow=${!category.isShow}${cascade ? '&cascade=true' : ''}`
+    const url = `/product-service/api/v1/admin/categories/${category.id}/show?isShow=${!category.isShow}${cascade ? '&cascade=true' : ''}`
 
     await axios.put(url, {}, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
@@ -418,7 +418,7 @@ async function handleDelete(category: any) {
       type: 'warning'
     })
 
-    await axios.delete(`http://localhost:9999/product-service/api/v1/admin/categories/${category.id}`, {
+    await axios.delete(`/product-service/api/v1/admin/categories/${category.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -436,7 +436,7 @@ async function handleDelete(category: any) {
 function getCategoryIcon(icon: string) {
   if (!icon) return ''
   if (icon.startsWith('http')) return icon
-  return `http://localhost:9999/static${icon}`
+  return `/static${icon}`
 }
 
 // 获取层级类型
@@ -502,7 +502,7 @@ function findCategoryById(id: number): any {
 // 查看分类路径
 async function handleViewPath(category: any) {
   try {
-    const response = await axios.get(`http://localhost:9999/product-service/api/v1/admin/categories/${category.id}/path`, {
+    const response = await axios.get(`/product-service/api/v1/admin/categories/${category.id}/path`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -524,7 +524,7 @@ async function handleBatchDelete() {
     })
 
     const ids = selectedCategories.value.map(item => item.id)
-    await axios.delete('http://localhost:9999/product-service/api/v1/admin/categories/batch', {
+    await axios.delete('/product-service/api/v1/admin/categories/batch', {
       data: { ids },
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })

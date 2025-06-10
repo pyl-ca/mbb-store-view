@@ -57,7 +57,7 @@
           <div class="goods-list">
             <div v-for="item in orderItems" :key="item.skuId" class="goods-item">
               <div class="goods-image-wrapper">
-                <img :src="`http://localhost:9999/static${item.image}`" class="goods-image" />
+                <img :src="`/static${item.image}`" class="goods-image" />
               </div>
               <div class="goods-info">
                 <div class="goods-title">{{ item.name }}</div>
@@ -258,7 +258,7 @@ async function loadOrderItems() {
     if (skuId && quantity) {
       // 从商品详情页直接购买
       isFromCart.value = false
-      const response = await axios.get(`http://localhost:9999/order-service/api/v1/sku/${skuId}`)
+      const response = await axios.get(`/order-service/api/v1/sku/${skuId}`)
       const sku = response.data.data
       orderItems.value = [{
         skuId: sku.id,
@@ -277,7 +277,7 @@ async function loadOrderItems() {
         cartIds.value = cartIdsArray.map(id => parseInt(id)) // 存储购物车ID列表
 
         const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-        const response = await axios.get(`http://localhost:9999/cart-service/api/cart/list`, {
+        const response = await axios.get(`/cart-service/api/cart/list`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         console.log('购物车API响应:', response.data) // 调试信息
@@ -313,7 +313,7 @@ async function loadAddressList() {
     }
 
     console.log('发送地址请求，Authorization:', `Bearer ${token}`)
-    const response = await axios.get(`http://localhost:9999/user-service/api/v1/addresses`, {
+    const response = await axios.get(`/user-service/api/v1/addresses`, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -403,7 +403,7 @@ async function submitOrder() {
 
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
     const response = await axios.post(
-      `http://localhost:9999/order-service/api/v1/orders`,
+      `/order-service/api/v1/orders`,
       orderData,
       {
         headers: { Authorization: `Bearer ${token}` }

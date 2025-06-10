@@ -338,7 +338,7 @@ async function loadOrders() {
 
     console.log('最终发送的查询参数:', params)
 
-    const response = await axios.get('http://localhost:9999/order-service/api/v1/orders/admin/all', {
+    const response = await axios.get('/order-service/api/v1/orders/admin/all', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -407,7 +407,7 @@ async function loadPendingDeliveryOrders() {
 
     console.log('待发货订单查询参数:', params)
 
-    const response = await axios.get('http://localhost:9999/order-service/api/v1/orders/admin/all', {
+    const response = await axios.get('/order-service/api/v1/orders/admin/all', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -476,7 +476,7 @@ async function loadPendingDeliveryOrders() {
 // 加载快递公司列表
 async function loadExpressCompanies() {
   try {
-    const response = await axios.get('http://localhost:9999/order-service/api/v1/delivery/express/companies', {
+    const response = await axios.get('/order-service/api/v1/delivery/express/companies', {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     expressCompanies.value = response.data.data || []
@@ -539,7 +539,7 @@ async function submitDelivery() {
   submitting.value = true
 
   try {
-    await axios.post('http://localhost:9999/order-service/api/v1/delivery/create', deliveryForm, {
+    await axios.post('/order-service/api/v1/delivery/create', deliveryForm, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -557,7 +557,7 @@ async function submitDelivery() {
 // 查看物流信息
 async function viewDeliveryInfo(order: any) {
   try {
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/delivery/order/${order.orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/delivery/order/${order.orderSn}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 

@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { Product, ProductFilter, ProductListResponse } from '../types/product'
 
-const API_BASE_URL = 'http://localhost:3000/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9999'
 
 export const productApi = {
   async getProducts(filter: ProductFilter): Promise<ProductListResponse> {

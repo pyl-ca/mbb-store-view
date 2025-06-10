@@ -25,7 +25,7 @@
         <div class="guess-title">猜你喜欢</div>
         <div class="guess-list">
           <div class="guess-item" v-for="item in guessList" :key="item.id" @click="goToProductDetail(item.id)">
-            <img :src="`http://localhost:9999/static${item.image}`" class="guess-img" />
+            <img :src="getProductImageUrl(item.image)" class="guess-img" />
             <div class="guess-info">
               <div class="guess-name">{{ item.name }}</div>
               <div class="guess-price">￥{{ item.price }}</div>
@@ -47,6 +47,7 @@ import CategoryNav from '../components/CategoryNav.vue'
 import BannerCarousel from '../components/BannerCarousel.vue'
 import CategorySelector from '../components/CategorySelector.vue'
 import axios from 'axios'
+import { getProductImageUrl } from '@/utils/imageUtils'
 
 const banners = ref<any[]>([])
 const recommendList = ref([
@@ -58,13 +59,24 @@ const recommendList = ref([
 
 const guessList = ref<any[]>([])
 
-onMounted(() => {
-  axios.get('http://localhost:9999/product-service/api/v1/banners/list').then(res => {
-    banners.value = res.data.data || []
-  })
-  axios.get('http://localhost:9999/product-service/api/v1/products/recommend').then(res => {
-    guessList.value = res.data.data || []
-  })
+onMounted(async () => {
+  try {
+    // 获取轮播图数据
+    console.log('开始获取轮播图数据...')
+    const bannersResponse = await axios.get('/product-service/api/v1/banners/list')
+    console.log('轮播图API响应:', bannersResponse.data)
+    banners.value = bannersResponse.data.data || []
+    console.log('轮播图数据:', banners.value)
+
+    // 获取推荐商品数据
+    console.log('开始获取推荐商品数据...')
+    const recommendResponse = await axios.get('/product-service/api/v1/products/recommend')
+    console.log('推荐商品API响应:', recommendResponse.data)
+    guessList.value = recommendResponse.data.data || []
+    console.log('推荐商品数据:', guessList.value)
+  } catch (error) {
+    console.error('加载首页数据失败:', error)
+  }
 })
 const router = useRouter()
 const goToProductDetail = (productId: string) => {

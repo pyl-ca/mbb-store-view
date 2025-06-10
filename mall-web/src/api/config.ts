@@ -1,5 +1,5 @@
 // API配置文件
-export const API_BASE_URL = 'http://localhost:9999'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
 
 // 各服务的API端点
 export const API_ENDPOINTS = {
@@ -61,7 +61,15 @@ export const API_ENDPOINTS = {
   AUTH_SERVICE: {
     BASE: `${API_BASE_URL}/mbb-auth`,
     TOKEN: '/oauth/token',
-    REGISTER: '/auth/register/register'
+    LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
+    REGISTER: '/auth/register/register',
+    REGISTER_ADMIN: '/auth/register/admin',
+    REGISTER_CAPTCHA: '/auth/register/captcha/register',
+    LOGIN_CAPTCHA: '/auth/captcha/login',
+    LOGIN_INFO: '/auth/login/info',
+    USER_EXISTS: '/api/v1/users/exists',
+    USER_BY_USERNAME: '/api/v1/users/username'
   },
 
   // 物流服务
@@ -72,7 +80,8 @@ export const API_ENDPOINTS = {
     TRACKING: '/delivery/tracking',
     CONFIRM: '/delivery/confirm',
     SIMULATE: '/delivery/simulate',
-    BATCH: '/delivery/batch'
+    BATCH: '/delivery/batch',
+    EXPRESS_COMPANIES: '/delivery/express/companies'
   },
 
   // 退货服务
@@ -130,6 +139,11 @@ export const API_ENDPOINTS = {
     // 文件上传
     UPLOAD_IMAGES: '/upload/review-images',
     UPLOAD_IMAGE: '/upload/review-image',
+    UPLOAD: '/upload/review-images',
+    CHECK: '/reviews/check-reviewed',
+    STATS: '/reviews/stats/product',
+    LIKE: '/reviews/{reviewId}/like',
+    REPLY: '/replies',
 
     // 管理端
     ADMIN_REVIEWS: '/admin/reviews',

@@ -375,7 +375,7 @@ onMounted(async () => {
 // 加载余额信息
 async function loadBalanceInfo() {
   try {
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/balance`, {
+    const response = await axios.get(`/payment-service/api/v1/balance`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     balanceInfo.value = response.data.data
@@ -387,7 +387,7 @@ async function loadBalanceInfo() {
 // 检查是否设置支付密码
 async function checkPayPassword() {
   try {
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/pay-password/check`, {
+    const response = await axios.get(`/payment-service/api/v1/pay-password/check`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     hasPayPassword.value = response.data.data
@@ -400,7 +400,7 @@ async function checkPayPassword() {
 async function loadRecentTransactions() {
   try {
     console.log('开始加载最近交易记录...')
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/payment/records?size=5`, {
+    const response = await axios.get(`/payment-service/api/v1/payment/records?size=5`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -450,7 +450,7 @@ async function handleRecharge() {
 
   try {
     await axios.post(
-      `http://localhost:9999/payment-service/api/v1/recharge`,
+      `/payment-service/api/v1/recharge`,
       {
         amount: amount,
         payType: rechargePayMethod.value
@@ -507,7 +507,7 @@ async function handleSetPassword() {
 
   try {
     await axios.post(
-      `http://localhost:9999/payment-service/api/v1/pay-password/set`,
+      `/payment-service/api/v1/pay-password/set`,
       {
         payPassword: passwordForm.payPassword,
         confirmPassword: passwordForm.confirmPassword
@@ -543,7 +543,7 @@ async function handleChangePassword() {
 
   try {
     await axios.put(
-      `http://localhost:9999/payment-service/api/v1/pay-password/update`,
+      `/payment-service/api/v1/pay-password/update`,
       {
         oldPassword: changePasswordForm.oldPassword,
         newPassword: changePasswordForm.newPassword,
@@ -573,7 +573,7 @@ async function handleChangePassword() {
 async function loadAndShowPaymentRecords() {
   try {
     console.log('开始加载交易记录...')
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/payment/records`, {
+    const response = await axios.get(`/payment-service/api/v1/payment/records`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -600,7 +600,7 @@ async function loadAndShowPaymentRecords() {
 // 加载并显示充值记录
 async function loadAndShowRechargeRecords() {
   try {
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/recharge/records`, {
+    const response = await axios.get(`/payment-service/api/v1/recharge/records`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     rechargeRecordsList.value = response.data.data.records || []

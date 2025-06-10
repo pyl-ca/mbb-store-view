@@ -13,7 +13,7 @@
     <div v-else>
       <div class="guess-list">
         <div class="guess-item" v-for="product in products" :key="product.id" @click="goToProductDetail(product.id)">
-          <img :src="`http://localhost:9999/static${product.image}`" class="guess-img" />
+          <img :src="getProductImageUrl(product.image)" class="guess-img" />
           <div class="guess-info">
             <div class="guess-name">{{ product.name }}</div>
             <div class="guess-price">￥{{ product.price }}</div>
@@ -28,7 +28,8 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import axios from 'axios'
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
+import { getProductImageUrl } from '@/utils/imageUtils'
 
 const route = useRoute()
 const products = ref([])
@@ -75,7 +76,7 @@ async function loadProducts() {
 
     console.log('搜索参数:', params)
 
-    const response = await axios.get(`http://localhost:9999/product-service/api/v1/products/select`, {
+    const response = await axios.get(`/product-service/api/v1/products/select`, {
       params
     })
     products.value = response.data.data.records

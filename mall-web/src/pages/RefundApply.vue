@@ -105,7 +105,7 @@
           <el-form-item label="上传图片">
             <el-upload
               v-model:file-list="fileList"
-              action="http://localhost:9999/payment-service/api/v1/refund/upload-image"
+              :action="uploadUrl"
               list-type="picture-card"
               :headers="uploadHeaders"
               :on-success="handleUploadSuccess"
@@ -144,6 +144,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { getProductImageUrl } from '../utils/imageUtils'
 
 const router = useRouter()
 const route = useRoute()
@@ -188,6 +189,9 @@ const uploadHeaders = ref({
   Authorization: ''
 })
 
+// 上传URL
+const uploadUrl = ref('')
+
 // 退货申请表单
 const refundForm = reactive({
   orderSn: '',
@@ -219,11 +223,16 @@ const refundRules = {
 
 // 页面初始化
 onMounted(() => {
-  // 设置上传头部
+  // 设置上传头部和URL
   const token = localStorage.getItem('token') || localStorage.getItem('access_token')
   if (token) {
     uploadHeaders.value.Authorization = `Bearer ${token}`
   }
+
+  // 设置上传URL - 使用完整URL通过网关
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
+  uploadUrl.value = `${API_BASE_URL}/payment-service/api/v1/refund/upload-image`
+  console.log('🔧 设置上传URL:', uploadUrl.value)
 
   const orderSn = route.query.orderSn as string
   if (orderSn) {
@@ -246,7 +255,7 @@ async function loadOrderDetail(orderSn: string) {
       return
     }
 
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/orders/${orderSn}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -285,11 +294,9 @@ function getStatusType(status: number) {
   return types[status as keyof typeof types] || 'info'
 }
 
-// 获取图片URL
+// 获取图片URL - 使用统一的工具函数
 function getImageUrl(imagePath: string) {
-  if (!imagePath) return '/placeholder.jpg'
-  if (imagePath.startsWith('http')) return imagePath
-  return `http://localhost:9999/static${imagePath}`
+  return getProductImageUrl(imagePath)
 }
 
 // 上传前检查
@@ -313,8 +320,12 @@ function handleUploadSuccess(response: { code: string; data: FileUploadVO; msg?:
   console.log('上传成功:', response)
   if (response.code === '000000') {
     // 根据后端返回的数据结构获取图片URL
-    const imageUrl = response.data.fullUrl || response.data.relativePath
+    let imageUrl = response.data.fullUrl || response.data.relativePath
     if (imageUrl) {
+      // 清理图片URL，移除服务前缀，确保存储的是干净的路径
+      imageUrl = imageUrl.replace(/\/payment-service\//g, '/')
+      console.log('🔧 清理后的图片URL:', imageUrl)
+
       refundForm.images.push(imageUrl)
       ElMessage.success('图片上传成功')
       console.log('图片URL已添加到表单:', imageUrl)
@@ -348,7 +359,9 @@ function handleFileRemove(file: any, fileList: any[]) {
   console.log('移除文件:', file)
   // 从表单数据中移除对应的图片URL
   if (file.response?.code === '000000') {
-    const imageUrl = file.response.data.fullUrl || file.response.data.relativePath
+    let imageUrl = file.response.data.fullUrl || file.response.data.relativePath
+    // 清理图片URL，确保与存储的格式一致
+    imageUrl = imageUrl.replace(/\/payment-service\//g, '/')
     const index = refundForm.images.indexOf(imageUrl)
     if (index > -1) {
       refundForm.images.splice(index, 1)
@@ -382,7 +395,7 @@ async function submitRefund() {
     console.log('提交退款申请，表单数据:', refundForm)
     console.log('上传的图片URLs:', refundForm.images)
 
-    await axios.post('http://localhost:9999/payment-service/api/v1/refund/apply', refundForm, {
+    await axios.post('/payment-service/api/v1/refund/apply', refundForm, {
       headers: {
         Authorization: `Bearer ${token}`
       }

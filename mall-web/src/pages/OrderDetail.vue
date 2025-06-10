@@ -404,7 +404,7 @@ async function loadOrderDetail(orderSn: string) {
       return
     }
 
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/orders/${orderSn}`, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -448,7 +448,7 @@ async function checkRefundRecord(orderSn: string) {
 
     // 先尝试真实API
     try {
-      const response = await axios.get(`http://localhost:9999/payment-service/api/v1/refund/order/${orderSn}`, {
+      const response = await axios.get(`/payment-service/api/v1/refund/order/${orderSn}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       console.log('退款记录响应:', response.data)
@@ -555,7 +555,7 @@ async function cancelOrder() {
     })
 
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-    await axios.put(`http://localhost:9999/order-service/api/v1/orders/${orderDetail.value.orderSn}/cancel`, {}, {
+    await axios.put(`/order-service/api/v1/orders/${orderDetail.value.orderSn}/cancel`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -581,7 +581,7 @@ async function confirmReceive() {
     })
 
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-    await axios.put(`http://localhost:9999/order-service/api/v1/orders/${orderDetail.value.orderSn}/confirm`, {}, {
+    await axios.put(`/order-service/api/v1/orders/${orderDetail.value.orderSn}/confirm`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -767,7 +767,7 @@ async function saveAdminRemark(remark: string) {
 
   try {
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-    const url = `http://localhost:9999/order-service/api/v1/orders/${orderDetail.value.orderSn}/admin-remark`
+    const url = `/order-service/api/v1/orders/${orderDetail.value.orderSn}/admin-remark`
     const requestData = { adminRemark: remark }
 
     console.log('保存备注请求:')

@@ -91,7 +91,7 @@ const currentProduct = ref<any>(null)
 // 测试加载商品列表
 async function testLoadProducts() {
   try {
-    const response = await axios.get('http://localhost:9999/product-service/api/v1/admin/products', {
+    const response = await axios.get('/product-service/api/v1/admin/products', {
       params: { page: 1, size: 10 },
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -112,7 +112,7 @@ async function testLoadProducts() {
 // 测试加载分类列表
 async function testLoadCategories() {
   try {
-    const response = await axios.get('http://localhost:9999/product-service/api/v1/admin/categories/tree', {
+    const response = await axios.get('/product-service/api/v1/admin/categories/tree', {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     

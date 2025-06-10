@@ -217,8 +217,8 @@
             <el-image
               v-for="(image, index) in refundDetail.images"
               :key="index"
-              :src="image"
-              :preview-src-list="refundDetail.images"
+              :src="getRefundImageUrl(image)"
+              :preview-src-list="refundDetail.images?.map(img => getRefundImageUrl(img))"
               :initial-index="index"
               fit="cover"
               class="refund-image"
@@ -277,6 +277,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { refundApi } from '../../api/refund'
+import { getRefundImageUrl } from '../../utils/imageUtils'
 
 // 数据定义
 const loading = ref(false)
@@ -349,7 +350,7 @@ async function loadRefunds() {
       ...filterForm
     }
 
-    const response = await axios.get('http://localhost:9999/payment-service/api/v1/refund/admin/records', {
+    const response = await axios.get('/payment-service/api/v1/refund/admin/records', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -384,7 +385,7 @@ function resetFilter() {
 // 查看退款详情
 async function viewRefundDetail(refund: any) {
   try {
-    const response = await axios.get(`http://localhost:9999/payment-service/api/v1/refund/${refund.refundSn}`, {
+    const response = await axios.get(`/payment-service/api/v1/refund/${refund.refundSn}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -635,7 +636,7 @@ async function batchAudit(auditResult: string) {
     auditing.value = true
     const refundSns = selectedRefunds.value.map((item: any) => item.refundSn)
 
-    await axios.post('http://localhost:9999/payment-service/api/v1/refund/audit', {
+    await axios.post('/payment-service/api/v1/refund/audit', {
       refundSns,
       auditResult,
       auditRemark: `批量${action}`,

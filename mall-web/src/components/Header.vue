@@ -152,7 +152,7 @@
 
     const handleSearch = async () => {
       try {
-        const response = await axios.get('http://localhost:9999/product-service/api/v1/products/select', {
+        const response = await axios.get('/product-service/api/v1/products/select', {
           params: {
             page: 1,
             size: 10,

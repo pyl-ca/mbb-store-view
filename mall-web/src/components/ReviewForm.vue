@@ -175,7 +175,7 @@ const rules = {
 
 // 上传配置
 const uploadAction = computed(() => {
-  return 'http://localhost:9999/review-service/api/v1/upload/review-image'
+  return '/review-service/api/v1/upload/review-image'
 })
 
 const uploadHeaders = computed(() => {

@@ -15,12 +15,12 @@
 </template>
 
 <script setup lang="ts">
+import { getBannerImageUrl } from '@/utils/imageUtils'
+
 const props = defineProps<{ banners: Array<{ id: number, title: string, imageUrl: string, redirect_url: string }> }>()
-const defaultImg = 'http://localhost:9999/product-service/search1.png'
+
 function getBannerImgUrl(url: string) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `http://localhost:9999${url.startsWith('/') ? url : '/' + url}`
+  return getBannerImageUrl(url)
 }
 </script>
 

@@ -346,7 +346,7 @@ async function loadOrders() {
       params.status = 3
     }
 
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders`, {
+    const response = await axios.get(`/order-service/api/v1/orders`, {
       params,
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -416,7 +416,7 @@ async function loadMissingOrderItems(orders: Order[]) {
   // 为每个缺少商品信息的订单单独调用详情API
   for (const order of ordersWithoutItems) {
     try {
-      const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${order.orderSn}`, {
+      const response = await axios.get(`/order-service/api/v1/orders/${order.orderSn}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
@@ -444,7 +444,7 @@ async function checkRefundStatusForOrders(orders?: Order[]) {
 
   for (const order of eligibleOrders) {
     try {
-      const response = await axios.get(`http://localhost:9999/payment-service/api/v1/refund/order/${order.orderSn}`, {
+      const response = await axios.get(`/payment-service/api/v1/refund/order/${order.orderSn}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
 
@@ -602,7 +602,7 @@ async function cancelOrder(orderSn: string) {
     })
 
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-    await axios.put(`http://localhost:9999/order-service/api/v1/orders/${orderSn}/cancel`, {}, {
+    await axios.put(`/order-service/api/v1/orders/${orderSn}/cancel`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
 
@@ -626,7 +626,7 @@ async function confirmReceive(orderSn: string) {
     })
 
     const token = localStorage.getItem('access_token') || localStorage.getItem('token')
-    await axios.put(`http://localhost:9999/order-service/api/v1/orders/${orderSn}/confirm`, {}, {
+    await axios.put(`/order-service/api/v1/orders/${orderSn}/confirm`, {}, {
       headers: { Authorization: `Bearer ${token}` }
     })
 

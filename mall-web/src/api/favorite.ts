@@ -69,7 +69,7 @@ export const favoriteApi = {
       return favorites.map((item: FavoriteItem) => ({
         ...item,
         productImage: item.productImage && !item.productImage.startsWith('http')
-          ? `http://localhost:9999/static${item.productImage}`
+          ? `/static${item.productImage}`
           : item.productImage
       }))
     } catch (error: any) {

@@ -149,8 +149,8 @@
             <el-image
               v-for="(image, index) in detailDialog.refund.images"
               :key="index"
-              :src="image"
-              :preview-src-list="detailDialog.refund.images"
+              :src="getRefundImageUrl(image)"
+              :preview-src-list="detailDialog.refund.images?.map(img => getRefundImageUrl(img))"
               :initial-index="index"
               fit="cover"
               class="refund-image"
@@ -231,6 +231,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { refundApi } from '../../api/refund'
 import type { RefundRecord, RefundFilter } from '../../types/refund'
+import { getRefundImageUrl } from '../../utils/imageUtils'
 import axios from 'axios'
 
 const loading = ref(false)
@@ -307,7 +308,7 @@ const confirmAudit = async () => {
     // 判断是单个审核还是批量审核
     if (auditDialog.refundSns.length === 1) {
       // 单个审核
-      await axios.post('http://localhost:9999/payment-service/api/v1/refund/audit', {
+      await axios.post('/payment-service/api/v1/refund/audit', {
         refundSn: auditDialog.refundSns[0],
         auditResult: auditDialog.type,
         auditRemark: auditForm.auditRemark,
@@ -317,7 +318,7 @@ const confirmAudit = async () => {
       })
     } else {
       // 批量审核
-      await axios.post('http://localhost:9999/payment-service/api/v1/refund/audit', {
+      await axios.post('/payment-service/api/v1/refund/audit', {
         refundSns: auditDialog.refundSns,
         auditResult: auditDialog.type,
         auditRemark: auditForm.auditRemark,

@@ -70,7 +70,7 @@ async function loadOrderInfo() {
       router.push('/user/orders')
       return
     }
-    const response = await axios.get(`http://localhost:9999/order-service/api/v1/orders/${orderSn}`, {
+    const response = await axios.get(`/order-service/api/v1/orders/${orderSn}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
     orderInfo.value = response.data.data

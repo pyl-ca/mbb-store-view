@@ -8,11 +8,10 @@ import type {
   ResetPasswordRequest,
   AssignRolesRequest,
   Role,
-  Menu,
-  ApiResponse
+  Menu
 } from '../types/admin-user'
 
-const API_BASE_URL = 'http://localhost:9999'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9999'
 
 // 获取认证头
 function getAuthHeaders() {

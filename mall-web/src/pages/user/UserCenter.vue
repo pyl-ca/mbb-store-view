@@ -70,6 +70,7 @@ import {
   RefreshLeft
 } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { API_BASE_URL } from '../../api/config'
 
 const router = useRouter()
 const route = useRoute()
@@ -104,8 +105,19 @@ const userAvatar = computed(() => {
   if (userInfo.value.avatar.startsWith('http')) {
     return userInfo.value.avatar
   }
-  // 头像存储在服务器的uploads目录下，直接访问
-  return `http://localhost:9999${userInfo.value.avatar}`
+
+  // 根据API文档，头像路径格式为 /uploads/1718694123456-avatar.jpg
+  // 需要转换为完整的访问路径：{API_BASE_URL}/user-service/uploads/{头像文件名}
+  let avatarUrl = ''
+  if (userInfo.value.avatar.startsWith('/uploads/')) {
+    avatarUrl = `${API_BASE_URL}/user-service${userInfo.value.avatar}`
+  } else {
+    // 兼容其他格式
+    avatarUrl = `${API_BASE_URL}/user-service/uploads/${userInfo.value.avatar}`
+  }
+
+  console.log('用户头像URL:', avatarUrl)
+  return avatarUrl
 })
 
 // 菜单选择处理
@@ -130,7 +142,7 @@ const fetchUserInfo = async () => {
     const token = localStorage.getItem('access_token')
     if (!token) return
 
-    const response = await axios.get('http://localhost:9999/user-service/api/v1/profile', {
+    const response = await axios.get('/user-service/api/v1/profile', {
       headers: {
         'Authorization': `Bearer ${token}`
       }

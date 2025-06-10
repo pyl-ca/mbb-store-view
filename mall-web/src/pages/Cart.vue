@@ -13,7 +13,7 @@
       <el-divider />
       <div v-for="item in cartList" :key="item.id" class="cart-item">
         <el-checkbox v-model="item.selected" @change="() => { updateSelected(item); updateAllSelected(); }" />
-        <img :src="item.productImage.startsWith('http') ? item.productImage : 'http://localhost:9999/static' + item.productImage" class="cart-img" />
+        <img :src="getProductImageUrl(item.productImage)" class="cart-img" />
         <div class="cart-info">
           <div class="cart-title">
             {{ item.productName }}
@@ -63,6 +63,7 @@ import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAccessToken, handleAuthError } from '../utils/auth'
 import { favoriteApi } from '../api/favorite'
+import { getProductImageUrl } from '../utils/imageUtils'
 
 const cartList = ref<any[]>([])
 const loading = ref(false)
@@ -90,7 +91,7 @@ async function fetchCartList() {
     }
     console.log('Request config:', requestConfig) // 调试信息
 
-    const response = await axios.get('http://localhost:9999/cart-service/api/cart/list', requestConfig)
+    const response = await axios.get('/cart-service/api/cart/list', requestConfig)
     const list = (response.data || []).map((item: any) => ({
       ...item,
       selected: !!item.selected, // 使用双感叹号将数字转换为布尔值
@@ -102,7 +103,7 @@ async function fetchCartList() {
     await Promise.all(
       cartList.value.map(async (item) => {
         try {
-          const res = await axios.get(`http://localhost:9999/product-service/api/v1/products/${item.productId}`)
+          const res = await axios.get(`/product-service/api/v1/products/${item.productId}`)
           item.description = res.data.data.description || ''
         } catch (e) {
           item.description = ''
@@ -172,7 +173,7 @@ function batchDelete() {
 
   const ids = cartList.value.filter(item => item.selected).map(item => item.id)
   Promise.all(ids.map(id =>
-    axios.delete(`http://localhost:9999/cart-service/api/cart/${id}`, {
+    axios.delete(`/cart-service/api/cart/${id}`, {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -190,7 +191,7 @@ async function deleteItem(item: any) {
   }
 
   try {
-    await axios.delete(`http://localhost:9999/cart-service/api/cart/${item.id}`, {
+    await axios.delete(`/cart-service/api/cart/${item.id}`, {
       headers: {
         'Authorization': 'Bearer ' + token
       }
@@ -211,7 +212,7 @@ function changeQuantity(item: any) {
     return
   }
 
-  axios.put(`http://localhost:9999/cart-service/api/cart/${item.id}/quantity`, null, {
+  axios.put(`/cart-service/api/cart/${item.id}/quantity`, null, {
     params: { quantity: item.quantity },
     headers: {
       'Authorization': 'Bearer ' + token
@@ -229,7 +230,7 @@ function updateSelected(item: any) {
     return
   }
 
-  axios.put(`http://localhost:9999/cart-service/api/cart/${item.id}/selected`, null, {
+  axios.put(`/cart-service/api/cart/${item.id}/selected`, null, {
     params: { selected: item.selected },
     headers: {
       'Authorization': 'Bearer ' + token
@@ -244,7 +245,7 @@ function clearCart() {
     return
   }
 
-  axios.delete('http://localhost:9999/cart-service/api/cart/clear', {
+  axios.delete('/cart-service/api/cart/clear', {
     headers: {
       'Authorization': 'Bearer ' + token
     }

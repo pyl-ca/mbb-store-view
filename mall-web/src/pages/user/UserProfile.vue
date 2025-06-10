@@ -72,6 +72,7 @@ import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
 import type { FormInstance, FormRules } from 'element-plus'
+import { API_BASE_URL } from '../../api/config'
 
 // 表单引用
 const formRef = ref<FormInstance>()
@@ -113,8 +114,19 @@ const avatarUrl = computed(() => {
   if (form.avatar.startsWith('http')) {
     return form.avatar
   }
-  // 头像存储在服务器的uploads目录下，直接访问
-  return `http://localhost:9999${form.avatar}`
+
+  // 根据API文档，头像路径格式为 /uploads/1718694123456-avatar.jpg
+  // 需要转换为完整的访问路径：{API_BASE_URL}/user-service/uploads/{头像文件名}
+  let avatarUrl = ''
+  if (form.avatar.startsWith('/uploads/')) {
+    avatarUrl = `${API_BASE_URL}/user-service${form.avatar}`
+  } else {
+    // 兼容其他格式
+    avatarUrl = `${API_BASE_URL}/user-service/uploads/${form.avatar}`
+  }
+
+  console.log('UserProfile - 头像URL:', avatarUrl)
+  return avatarUrl
 })
 
 // 文件输入引用
@@ -146,7 +158,7 @@ const handleFileChange = async (event: Event) => {
     // 发送PUT请求上传头像
     const token = localStorage.getItem('access_token')
     const response = await axios.put(
-      'http://localhost:9999/user-service/api/v1/profile/avatar',
+      '/user-service/api/v1/profile/avatar',
       formData,
       {
         headers: {
@@ -181,7 +193,7 @@ const fetchUserInfo = async () => {
     const token = localStorage.getItem('access_token')
     if (!token) return
 
-    const response = await axios.get('http://localhost:9999/user-service/api/v1/profile', {
+    const response = await axios.get('/user-service/api/v1/profile', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -216,7 +228,7 @@ const submitForm = async () => {
     loading.value = true
 
     const token = localStorage.getItem('access_token')
-    const response = await axios.put('http://localhost:9999/user-service/api/v1/profile', {
+    const response = await axios.put('/user-service/api/v1/profile', {
       nickname: form.nickname,
       gender: form.gender,
       mobile: form.mobile,

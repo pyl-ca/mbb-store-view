@@ -41,7 +41,7 @@
             @click="() => selectSpecValue(spec.id, value.id, value.image)"
           >
             <template v-if="value.image">
-              <img :src="value.image.startsWith('http') ? value.image : 'http://localhost:9999/static' + value.image" style="width:24px;height:24px;vertical-align:middle;margin-right:4px;" />
+              <img :src="getProductImageUrl(value.image)" style="width:24px;height:24px;vertical-align:middle;margin-right:4px;" />
             </template>
             {{ value.value }}
           </el-button>
@@ -86,6 +86,7 @@ import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router' // 确保导入 useRouter
 import FavoriteButton from '../components/FavoriteButton.vue'
 import ProductReviews from '../components/ProductReviews.vue'
+import { getProductImageUrl } from '@/utils/imageUtils'
 
 const route = useRoute()
 const router = useRouter() // 初始化 router
@@ -104,12 +105,23 @@ const currentSku = ref<any>(null)
 
 const fetchSpecsAndSkus = async (productId: string) => {
   // 获取规格
-  const specsRes = await axios.get(`http://localhost:9999/product-service/api/specs/product/${productId}`)
-  specs.value = specsRes.data
+  const specsRes = await axios.get(`/product-service/api/specs/product/${productId}`)
+  // 处理规格值中的图片路径
+  specs.value = specsRes.data.map((spec: any) => ({
+    ...spec,
+    values: (spec.values || []).map((value: any) => ({
+      ...value,
+      image: value.image ? getProductImageUrl(value.image) : value.image
+    }))
+  }))
 
   // 获取SKU列表
-  const skuRes = await axios.get(`http://localhost:9999/product-service/api/specs/product/${productId}/sku-list`)
-  skuList.value = skuRes.data
+  const skuRes = await axios.get(`/product-service/api/specs/product/${productId}/sku-list`)
+  // 处理SKU中的图片路径
+  skuList.value = skuRes.data.map((sku: any) => ({
+    ...sku,
+    image: sku.image ? getProductImageUrl(sku.image) : sku.image
+  }))
 
   // 默认选中第一个SKU的所有规格
   if (skuList.value.length > 0) {
@@ -126,9 +138,8 @@ const updateCurrentSku = () => {
     return sku.specs.every((s: any) => selectedSpecs.value[s.specId] === s.specValueId)
   })
   if (currentSku.value) {
-    mainImage.value = currentSku.value.image.startsWith('http')
-      ? currentSku.value.image
-      : `http://localhost:9999/static${currentSku.value.image}`
+    // SKU图片已经在 fetchSpecsAndSkus 中处理过了，直接使用
+    mainImage.value = currentSku.value.image
     productDetail.value.price = currentSku.value.price
     productDetail.value.stock = currentSku.value.stock
   }
@@ -140,15 +151,15 @@ watch(selectedSpecs, updateCurrentSku, { deep: true })
 onMounted(async () => {
   const productId = route.params.id as string
   try {
-    const response = await axios.get(`http://localhost:9999/product-service/api/v1/products/${productId}`)
+    const response = await axios.get(`/product-service/api/v1/products/${productId}`)
     const data = response.data.data
     // 拼接主图和轮播图URL
     if (data.image && !data.image.startsWith('http')) {
-      data.image = `http://localhost:9999/static${data.image}`
+      data.image = getProductImageUrl(data.image)
     }
     if (data.detailImages && Array.isArray(data.detailImages)) {
       data.detailImages = data.detailImages.map((img: string) =>
-        img.startsWith('http') ? img : `http://localhost:9999/static${img}`
+        getProductImageUrl(img)
       )
     }
     productDetail.value = data
@@ -167,7 +178,8 @@ function selectSpecValue(specId: number, valueId: number, image?: string) {
   // 如果是颜色规格，切换主图
   const spec = specs.value.find(s => s.id === specId)
   if (spec && spec.name.includes('颜色') && image) {
-    mainImage.value = image.startsWith('http') ? image : `http://localhost:9999/static${image}`
+    // 图片已经在 fetchSpecsAndSkus 中处理过了，直接使用
+    mainImage.value = image
   }
 }
 
@@ -187,7 +199,7 @@ async function addToCart() {
   try {
     const token = localStorage.getItem('access_token');
     await axios.post(
-      'http://localhost:9999/cart-service/api/cart/add',
+      '/cart-service/api/cart/add',
       null, // 因为后端用@RequestParam，数据放在url参数
       {
         params: {

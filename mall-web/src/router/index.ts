@@ -33,6 +33,7 @@ const routes = [
 
   // 测试页面
   { path: '/test-platform-funds', name: 'TestPlatformFunds', component: () => import('../pages/TestPlatformFunds.vue') },
+  { path: '/image-url-test', name: 'ImageUrlTest', component: () => import('../pages/ImageUrlTest.vue') },
 
   // 用户中心相关路由
   {
@@ -139,15 +140,23 @@ router.beforeEach((to, _from, next) => {
       if (userInfoStr) {
         const userInfo = JSON.parse(userInfoStr)
         const roles = userInfo.roles || []
-        const isAdmin = roles.some((role: string) => role === 'ROLE_ADMIN' || role === 'ADMIN' || role === 'MANAGER')
+        // 支持多种角色格式
+        const isAdmin = roles.some((role: string) =>
+          role === 'ADMIN' || role === 'MANAGER' ||
+          role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER'
+        )
+
+        console.log('权限检查 - 用户角色:', roles, '是否管理员:', isAdmin)
 
         if (!isAdmin) {
           // 不是管理员，重定向到商城首页
+          console.log('用户无管理员权限，重定向到首页')
           next('/')
           return
         }
       } else {
         // 没有用户信息，重定向到登录页
+        console.log('无用户信息，重定向到登录页')
         next('/login')
         return
       }

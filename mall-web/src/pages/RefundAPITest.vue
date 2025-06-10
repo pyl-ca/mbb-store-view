@@ -71,11 +71,11 @@ async function testRefundDetailAPI() {
     const token = localStorage.getItem('token') || localStorage.getItem('access_token')
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     
-    console.log('调用API:', `http://localhost:9999/payment-service/api/v1/refund/${testRefundSn.value}`)
+    console.log('调用API:', `/payment-service/api/v1/refund/${testRefundSn.value}`)
     console.log('请求头:', headers)
     
     const response = await axios.get(
-      `http://localhost:9999/payment-service/api/v1/refund/${testRefundSn.value}`,
+      `/payment-service/api/v1/refund/${testRefundSn.value}`,
       { headers }
     )
     

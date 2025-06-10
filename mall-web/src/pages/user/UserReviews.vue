@@ -341,6 +341,8 @@ import { ElMessage } from 'element-plus'
 import { Search, Picture, User } from '@element-plus/icons-vue'
 import { reviewApi } from '../../api/review'
 import type { Review } from '../../types/review'
+import { API_BASE_URL } from '../../api/config'
+import { getReviewImageUrl } from '../../utils/imageUtils'
 
 const loading = ref(false)
 const reviews = ref<Review[]>([])
@@ -374,6 +376,38 @@ const loadReviews = async () => {
 
     reviews.value = response.records || []
     total.value = response.total
+
+    // 添加调试信息
+    console.log('评价数据:', reviews.value)
+    reviews.value.forEach((review, index) => {
+      console.log(`评价${index + 1}:`, {
+        id: review.id,
+        productName: review.productName,
+        productImage: review.productImage,
+        images: review.images,
+        imagesType: typeof review.images
+      })
+
+      // 如果有评价图片，打印处理后的URL
+      if (review.images) {
+        let images: any = review.images
+        if (typeof images === 'string') {
+          try {
+            images = JSON.parse(images)
+          } catch (e) {
+            images = [images]
+          }
+        }
+        if (Array.isArray(images)) {
+          images.forEach((img: string, imgIndex: number) => {
+            console.log(`评价${index + 1}图片${imgIndex + 1}:`, {
+              原始路径: img,
+              处理后URL: getReviewImage(img)
+            })
+          })
+        }
+      }
+    })
   } catch (error: any) {
     console.error('加载评价失败:', error)
     ElMessage.error(error.message || '加载评价失败')
@@ -427,35 +461,23 @@ const getTagType = (type: number) => {
 const getProductImage = (image: string) => {
   if (!image) return '/images/placeholder.jpg'
   if (image.startsWith('http')) return image
+
+  // 获取API基础URL
+  const API_BASE_URL = 'http://39.107.74.208:9999'
+
   // 商品图片使用静态资源路径
-  if (image.startsWith('/images/product/')) {
-    return `http://localhost:9999/static${image}`
+  if (image.startsWith('/static/')) {
+    return `${API_BASE_URL}${image}`
   }
-  return `http://localhost:9999/static/images/product${image}`
+  if (image.startsWith('/images/product/')) {
+    return `${API_BASE_URL}/static${image}`
+  }
+  return `${API_BASE_URL}/static/images/product${image}`
 }
 
-// 获取评论图片路径
+// 获取评论图片路径 - 使用统一的工具函数
 const getReviewImage = (image: string) => {
-  if (!image) return '/images/placeholder.jpg'
-  if (image.startsWith('http')) return image
-
-  // 评论图片路径处理
-  if (image.startsWith('/review/')) {
-    // 根据实际存储路径，评价图片存储在 uploads/review/ 目录下
-    // 数据库路径：/review/2025/06/02/filename.jpg
-    // 实际路径：uploads/review/2025/06/filename.jpg
-    // 访问路径：http://localhost:9999/uploads/review/2025/06/filename.jpg
-    const actualPath = `http://localhost:9999/uploads${image}`
-
-    return actualPath
-  }
-
-  // 如果路径已经是 /uploads/ 开头，直接使用
-  if (image.startsWith('/uploads/')) {
-    return `http://localhost:9999${image}`
-  }
-
-  return `http://localhost:9999${image}`
+  return getReviewImageUrl(image)
 }
 
 // 查看评价详情

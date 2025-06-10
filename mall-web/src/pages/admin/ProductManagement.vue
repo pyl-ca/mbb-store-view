@@ -260,7 +260,7 @@ async function loadProducts() {
     if (filterForm.status !== undefined) params.status = filterForm.status
     if (filterForm.recommend !== undefined) params.recommend = filterForm.recommend
 
-    const response = await axios.get('http://localhost:9999/product-service/api/v1/admin/products', {
+    const response = await axios.get('/product-service/api/v1/admin/products', {
       params,
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -281,7 +281,7 @@ async function loadProducts() {
 // 加载分类列表
 async function loadCategories() {
   try {
-    const response = await axios.get('http://localhost:9999/product-service/api/v1/admin/categories/tree', {
+    const response = await axios.get('/product-service/api/v1/admin/categories/tree', {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -351,7 +351,7 @@ async function handleBatchOnShelf() {
     })
 
     const ids = selectedProducts.value.map(item => item.id)
-    await axios.put('http://localhost:9999/product-service/api/v1/admin/products/batch/on-shelf',
+    await axios.put('/product-service/api/v1/admin/products/batch/on-shelf',
       { ids },
       { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` } }
     )
@@ -374,7 +374,7 @@ async function handleBatchOffShelf() {
     })
 
     const ids = selectedProducts.value.map(item => item.id)
-    await axios.put('http://localhost:9999/product-service/api/v1/admin/products/batch/off-shelf',
+    await axios.put('/product-service/api/v1/admin/products/batch/off-shelf',
       { ids },
       { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` } }
     )
@@ -397,7 +397,7 @@ async function handleBatchDelete() {
     })
 
     const ids = selectedProducts.value.map(item => item.id)
-    await axios.delete('http://localhost:9999/product-service/api/v1/admin/products/batch', {
+    await axios.delete('/product-service/api/v1/admin/products/batch', {
       data: { ids },
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
@@ -421,8 +421,8 @@ async function toggleStatus(product: any) {
     })
 
     const endpoint = product.status
-      ? `http://localhost:9999/product-service/api/v1/admin/products/${product.id}/off-shelf`
-      : `http://localhost:9999/product-service/api/v1/admin/products/${product.id}/on-shelf`
+      ? `/product-service/api/v1/admin/products/${product.id}/off-shelf`
+      : `/product-service/api/v1/admin/products/${product.id}/on-shelf`
 
     await axios.put(endpoint, {}, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
@@ -446,7 +446,7 @@ async function toggleRecommend(product: any) {
       type: 'warning'
     })
 
-    await axios.put(`http://localhost:9999/product-service/api/v1/admin/products/${product.id}/recommend`,
+    await axios.put(`/product-service/api/v1/admin/products/${product.id}/recommend`,
       { recommend: !product.recommend },
       { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` } }
     )
@@ -468,7 +468,7 @@ async function handleDelete(product: any) {
       type: 'warning'
     })
 
-    await axios.delete(`http://localhost:9999/product-service/api/v1/admin/products/${product.id}`, {
+    await axios.delete(`/product-service/api/v1/admin/products/${product.id}`, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
@@ -486,7 +486,17 @@ async function handleDelete(product: any) {
 function getProductImage(image: string) {
   if (!image) return '/images/placeholder.jpg'
   if (image.startsWith('http')) return image
-  return `http://localhost:9999/static${image}`
+
+  // 使用完整的服务器地址
+  const API_BASE_URL = 'http://39.107.74.208:9999'
+
+  // 如果路径已经包含 /static 前缀，直接拼接基础URL
+  if (image.startsWith('/static/')) {
+    return `${API_BASE_URL}${image}`
+  }
+
+  // 否则添加 /static 前缀
+  return `${API_BASE_URL}/static${image}`
 }
 
 // 格式化时间

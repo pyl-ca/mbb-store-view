@@ -177,7 +177,7 @@ const fetchAddressList = async () => {
   loading.value = true
   try {
     const token = localStorage.getItem('access_token')
-    const response = await axios.get('http://localhost:9999/user-service/api/v1/addresses', {
+    const response = await axios.get('/user-service/api/v1/addresses', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -199,7 +199,7 @@ const fetchAddressList = async () => {
 // 获取地区数据
 const fetchRegionData = async () => {
   try {
-    const response = await axios.get('http://localhost:9999/user-service/api/v1/regions/tree')
+    const response = await axios.get('/user-service/api/v1/regions/tree')
     if (response.data.code === '000000') {
       regionOptions.value = response.data.data || []
     }
@@ -348,7 +348,7 @@ const submitAddressForm = async () => {
 
     if (isEdit.value) {
       // 更新地址 - 不需要在URL中包含ID，ID包含在请求体中
-      response = await axios.put('http://localhost:9999/user-service/api/v1/addresses', addressForm, {
+      response = await axios.put('/user-service/api/v1/addresses', addressForm, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -356,7 +356,7 @@ const submitAddressForm = async () => {
       })
     } else {
       // 新增地址
-      response = await axios.post('http://localhost:9999/user-service/api/v1/addresses', addressForm, {
+      response = await axios.post('/user-service/api/v1/addresses', addressForm, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -390,7 +390,7 @@ const deleteAddress = (id: number) => {
   }).then(async () => {
     try {
       const token = localStorage.getItem('access_token')
-      const response = await axios.delete(`http://localhost:9999/user-service/api/v1/addresses/${id}`, {
+      const response = await axios.delete(`/user-service/api/v1/addresses/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -415,7 +415,7 @@ const deleteAddress = (id: number) => {
 const setDefaultAddress = async (id: number) => {
   try {
     const token = localStorage.getItem('access_token')
-    const response = await axios.put(`http://localhost:9999/user-service/api/v1/addresses/${id}/default`, null, {
+    const response = await axios.put(`/user-service/api/v1/addresses/${id}/default`, null, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

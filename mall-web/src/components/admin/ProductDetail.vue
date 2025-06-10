@@ -246,7 +246,17 @@ const emit = defineEmits<{
 function getImageUrl(imagePath: string) {
   if (!imagePath) return ''
   if (imagePath.startsWith('http')) return imagePath
-  return `http://localhost:9999/static${imagePath}`
+
+  // 使用完整的服务器地址
+  const API_BASE_URL = 'http://39.107.74.208:9999'
+
+  // 如果路径已经包含 /static 前缀，直接拼接基础URL
+  if (imagePath.startsWith('/static/')) {
+    return `${API_BASE_URL}${imagePath}`
+  }
+
+  // 否则添加 /static 前缀
+  return `${API_BASE_URL}/static${imagePath}`
 }
 
 // 格式化时间

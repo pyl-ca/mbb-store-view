@@ -70,6 +70,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 interface ThirdCategory {
   id: number
@@ -95,8 +96,8 @@ let hideTimer: number | null = null
 
 onMounted(async () => {
   try {
-    const resp = await fetch('http://localhost:9999/product-service/api/v1/categories/tree')
-    const result = await resp.json()
+    const resp = await axios.get('/product-service/api/v1/categories/tree')
+    const result = resp.data
     console.log('分类数据:', result)
     if (result.code === '000000' && Array.isArray(result.data)) {
       categories.value = result.data.map((cat: any) => ({

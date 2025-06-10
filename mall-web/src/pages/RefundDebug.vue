@@ -56,15 +56,15 @@
       <div class="endpoint-list">
         <div class="endpoint-item">
           <strong>用户退款列表:</strong>
-          <code>GET http://localhost:9999/payment-service/api/v1/refund/user/records</code>
+          <code>GET /payment-service/api/v1/refund/user/records</code>
         </div>
         <div class="endpoint-item">
           <strong>退款详情:</strong>
-          <code>GET http://localhost:9999/payment-service/api/v1/refund/{refundSn}</code>
+          <code>GET /payment-service/api/v1/refund/{refundSn}</code>
         </div>
         <div class="endpoint-item">
           <strong>管理员退款列表:</strong>
-          <code>GET http://localhost:9999/payment-service/api/v1/refund/admin/records</code>
+          <code>GET /payment-service/api/v1/refund/admin/records</code>
         </div>
       </div>
     </div>
@@ -137,7 +137,7 @@ async function testDirectAPI() {
     console.log('直接调用API，headers:', headers)
 
     // 测试用户退款列表
-    const response = await axios.get('http://localhost:9999/payment-service/api/v1/refund/user/records', {
+    const response = await axios.get('/payment-service/api/v1/refund/user/records', {
       headers,
       params: { page: 1, size: 10 }
     })
