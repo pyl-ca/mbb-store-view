@@ -57,7 +57,7 @@
           <div class="goods-list">
             <div v-for="item in orderItems" :key="item.skuId" class="goods-item">
               <div class="goods-image-wrapper">
-                <img :src="`/static${item.image}`" class="goods-image" />
+                <img :src="getProductImageUrl(item.image)" class="goods-image" />
               </div>
               <div class="goods-info">
                 <div class="goods-title">{{ item.name }}</div>
@@ -194,6 +194,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { getProductImageUrl } from '../utils/imageUtils'
 
 // 类型定义
 interface OrderItem {

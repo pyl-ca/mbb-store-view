@@ -27,16 +27,12 @@ export function getImageUrl(
     baseUrl = API_BASE_URL
   } = options
 
-  console.log('处理图片路径:', imagePath)
-
   if (!imagePath) {
-    console.log('图片路径为空，使用占位图')
     return placeholder
   }
 
   // 如果已经是完整的URL
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    console.log('检测到完整URL，直接返回:', imagePath)
     return imagePath
   }
 
@@ -55,14 +51,11 @@ export function getImageUrl(
   } else if (imagePath.includes('payment-service')) {
     // 移除 payment-service 前缀，让网关路由处理
     finalUrl = finalUrl.replace(/\/payment-service\//g, '/')
-    console.log('🔧 getImageUrl 移除 payment-service 前缀后:', finalUrl)
   }
   // 其他路径（如头像 /uploads/xxx、退款图片 /uploads/refund/xxx、评论图片 /uploads/review/xxx）
   // 都直接使用网关地址，由网关路由到对应的服务
 
-  const result = `${baseUrl}${finalUrl}`
-  console.log('最终图片URL:', result)
-  return result
+  return `${baseUrl}${finalUrl}`
 }
 
 /**
@@ -84,16 +77,8 @@ export function getAvatarUrl(avatarPath: string): string {
 export function getRefundImageUrl(refundImagePath: string): string {
   if (!refundImagePath) return '/images/placeholder/refund.png'
 
-  console.log('🔍 处理退款图片路径:', refundImagePath)
-
-  // 如果是完整的URL，检查是否需要替换localhost
+  // 如果是完整的URL，直接返回
   if (refundImagePath.startsWith('http')) {
-    if (refundImagePath.includes('localhost:9999')) {
-      const correctedUrl = refundImagePath.replace('http://localhost:9999', 'http://39.107.74.208:9999')
-      console.log('🔧 替换localhost为服务器地址:', correctedUrl)
-      return correctedUrl
-    }
-    console.log('✅ 已经是正确的完整URL，直接返回:', refundImagePath)
     return refundImagePath
   }
 
@@ -103,12 +88,10 @@ export function getRefundImageUrl(refundImagePath: string): string {
   // 如果路径不以 / 开头，添加 /
   if (!refundImagePath.startsWith('/')) {
     finalPath = '/' + refundImagePath
-    console.log('📝 添加前缀斜杠后:', finalPath)
   }
 
   // 移除任何服务前缀（payment-service、review-service等）
   finalPath = finalPath.replace(/\/(payment-service|review-service)\//g, '/')
-  console.log('✂️ 移除服务前缀后:', finalPath)
 
   // 处理各种路径格式，确保最终格式为 /uploads/refund/filename
   if (finalPath.includes('/refund/')) {
@@ -123,22 +106,16 @@ export function getRefundImageUrl(refundImagePath: string): string {
         const refundPart = finalPath.substring(refundIndex)
         finalPath = '/uploads' + refundPart
       }
-      console.log('🔧 调整为 uploads/refund 路径后:', finalPath)
     }
   } else if (!finalPath.startsWith('/uploads/')) {
     // 如果不包含 /refund/ 且不以 /uploads/ 开头，假设是纯文件名
     const fileName = finalPath.replace(/^\/+/, '') // 移除开头的斜杠
     finalPath = '/uploads/refund/' + fileName
-    console.log('🆕 构建完整 uploads/refund 路径:', finalPath)
   }
 
-  // 强制使用正确的服务器地址
-  const CORRECT_BASE_URL = 'http://39.107.74.208:9999'
-  const result = `${CORRECT_BASE_URL}${finalPath}`
-  console.log('🎯 最终退款图片URL:', result)
-  console.log('🎯 使用的基础URL:', CORRECT_BASE_URL)
-  console.log('🎯 环境变量API_BASE_URL:', API_BASE_URL)
-  return result
+  // 使用环境变量配置的基础URL
+  const baseUrl = API_BASE_URL
+  return `${baseUrl}${finalPath}`
 }
 
 /**
@@ -147,19 +124,24 @@ export function getRefundImageUrl(refundImagePath: string): string {
  * @returns 完整的商品图片URL
  */
 export function getProductImageUrl(productImagePath: string): string {
-  if (!productImagePath) return ''
-  if (productImagePath.startsWith('http')) return productImagePath
+  if (!productImagePath) {
+    return ''
+  }
 
-  // 强制使用正确的服务器地址
-  const CORRECT_BASE_URL = 'http://39.107.74.208:9999'
+  if (productImagePath.startsWith('http')) {
+    return productImagePath
+  }
+
+  // 使用环境变量配置的基础URL
+  const baseUrl = API_BASE_URL
 
   // 如果路径已经包含 /static 前缀，直接拼接基础URL
   if (productImagePath.startsWith('/static/')) {
-    return `${CORRECT_BASE_URL}${productImagePath}`
+    return `${baseUrl}${productImagePath}`
   }
 
-  // 否则添加 /static 前缀
-  return `${CORRECT_BASE_URL}/static${productImagePath}`
+  // 标准格式：通过网关的 /static/** 路径访问商品图片
+  return `${baseUrl}/static${productImagePath}`
 }
 
 /**
@@ -171,16 +153,16 @@ export function getUserAvatarUrl(avatarPath: string): string {
   if (!avatarPath) return ''
   if (avatarPath.startsWith('http')) return avatarPath
 
-  // 强制使用正确的服务器地址
-  const CORRECT_BASE_URL = 'http://39.107.74.208:9999'
+  // 使用环境变量配置的基础URL
+  const baseUrl = API_BASE_URL
 
   // 处理不同的头像路径格式
   if (avatarPath.startsWith('/uploads/')) {
-    return `${CORRECT_BASE_URL}/user-service${avatarPath}`
+    return `${baseUrl}/user-service${avatarPath}`
   } else if (avatarPath.startsWith('uploads/')) {
-    return `${CORRECT_BASE_URL}/user-service/${avatarPath}`
+    return `${baseUrl}/user-service/${avatarPath}`
   } else {
-    return `${CORRECT_BASE_URL}/user-service/uploads/${avatarPath}`
+    return `${baseUrl}/user-service/uploads/${avatarPath}`
   }
 }
 
@@ -208,30 +190,34 @@ export function getBannerImageUrl(imageUrl: string): string {
  * @returns 完整的评论图片URL
  */
 export function getReviewImageUrl(imagePath: string): string {
-  if (!imagePath) return ''
-  if (imagePath.startsWith('http')) return imagePath
+  if (!imagePath) {
+    return ''
+  }
+
+  if (imagePath.startsWith('http')) {
+    return imagePath
+  }
 
   // 处理评论图片路径
   let finalPath = imagePath
 
-  // 如果路径不以 / 开头，添加 /
-  if (!imagePath.startsWith('/')) {
-    finalPath = '/' + imagePath
+  // 确保路径以 / 开头
+  if (!finalPath.startsWith('/')) {
+    finalPath = '/' + finalPath
   }
 
-  // 如果路径包含 /review/ 但不包含 /uploads/，添加 /uploads 前缀
-  if (finalPath.includes('/review/') && !finalPath.startsWith('/uploads/')) {
-    finalPath = '/uploads' + finalPath
-  }
-
-  // 如果路径以 /review/ 开头，转换为 /uploads/review/
-  if (finalPath.startsWith('/review/')) {
-    finalPath = '/uploads' + finalPath
-  }
-
-  // 如果已经是完整的uploads路径
-  if (finalPath.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${finalPath}`
+  // 根据网关配置，评论图片应该通过 /uploads/review/ 路径访问
+  // 如果路径不包含 /uploads/，添加 /uploads 前缀
+  if (!finalPath.startsWith('/uploads/')) {
+    // 如果路径包含 review，确保格式为 /uploads/review/
+    if (finalPath.includes('review')) {
+      // 移除可能存在的 /review/ 前缀，然后添加 /uploads/review/
+      finalPath = finalPath.replace(/^\/review\//, '/')
+      finalPath = '/uploads/review' + finalPath
+    } else {
+      // 默认添加 /uploads/review/ 前缀
+      finalPath = '/uploads/review' + finalPath
+    }
   }
 
   return `${API_BASE_URL}${finalPath}`

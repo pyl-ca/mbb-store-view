@@ -1,5 +1,17 @@
 // API配置文件
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
+// 根据环境动态配置API基础URL
+const isDevelopment = import.meta.env.MODE === 'development'
+const defaultDevUrl = 'http://localhost:9999'
+const defaultProdUrl = 'http://39.107.74.208:9999'
+
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+  (isDevelopment ? defaultDevUrl : defaultProdUrl)
+
+console.log('🔧 API配置信息:')
+console.log('🔧 当前模式:', import.meta.env.MODE)
+console.log('🔧 是否开发环境:', isDevelopment)
+console.log('🔧 环境变量API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
+console.log('🔧 最终API_BASE_URL:', API_BASE_URL)
 
 // 各服务的API端点
 export const API_ENDPOINTS = {

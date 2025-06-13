@@ -195,8 +195,10 @@ const emit = defineEmits<{
 const specList = ref<any[]>([])
 const skuList = ref<any[]>([])
 
+// 导入API配置
+import { API_BASE_URL } from '../../api/config'
+
 // 上传配置 - 根据环境动态设置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
 const uploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/image`
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`
@@ -406,7 +408,7 @@ function handleValueImageSuccess(response: any, specIndex: number, valueIndex: n
       const filename = urlParts[urlParts.length - 1]
 
       // 转换为静态资源路径
-      imageUrl = `http://39.107.74.208:9999/static/images/product/${filename}`
+      imageUrl = `${API_BASE_URL}/static/images/product/${filename}`
       console.log('🔧 规格值图片转换为静态资源路径:', imageUrl)
     }
 
@@ -439,7 +441,7 @@ function handleSkuImageSuccess(response: any, skuIndex: number) {
       const filename = urlParts[urlParts.length - 1]
 
       // 转换为静态资源路径
-      imageUrl = `http://39.107.74.208:9999/static/images/product/${filename}`
+      imageUrl = `${API_BASE_URL}/static/images/product/${filename}`
       console.log('🔧 SKU图片转换为静态资源路径:', imageUrl)
     }
 

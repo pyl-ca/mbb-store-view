@@ -342,7 +342,7 @@ import { Search, Picture, User } from '@element-plus/icons-vue'
 import { reviewApi } from '../../api/review'
 import type { Review } from '../../types/review'
 import { API_BASE_URL } from '../../api/config'
-import { getReviewImageUrl } from '../../utils/imageUtils'
+import { getReviewImageUrl, getProductImageUrl } from '../../utils/imageUtils'
 
 const loading = ref(false)
 const reviews = ref<Review[]>([])
@@ -459,20 +459,7 @@ const getTagType = (type: number) => {
 
 // 获取商品图片路径
 const getProductImage = (image: string) => {
-  if (!image) return '/images/placeholder.jpg'
-  if (image.startsWith('http')) return image
-
-  // 获取API基础URL
-  const API_BASE_URL = 'http://39.107.74.208:9999'
-
-  // 商品图片使用静态资源路径
-  if (image.startsWith('/static/')) {
-    return `${API_BASE_URL}${image}`
-  }
-  if (image.startsWith('/images/product/')) {
-    return `${API_BASE_URL}/static${image}`
-  }
-  return `${API_BASE_URL}/static/images/product${image}`
+  return getProductImageUrl(image) || '/images/placeholder.jpg'
 }
 
 // 获取评论图片路径 - 使用统一的工具函数

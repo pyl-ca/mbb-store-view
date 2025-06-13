@@ -1,6 +1,9 @@
-# 多阶段构建 Dockerfile（备份版本）
+# 多阶段构建 Dockerfile - 支持开发和生产环境
 # 第一阶段：构建阶段
 FROM node:18-alpine AS builder
+
+# 接收构建参数
+ARG NODE_ENV=production
 
 # 设置工作目录
 WORKDIR /app
@@ -18,11 +21,13 @@ COPY public ./public
 COPY index.html ./
 COPY vite.config.ts ./
 COPY tsconfig*.json ./
-COPY .env.production ./
 
-# 设置生产环境变量
-ENV NODE_ENV=production
-ENV VITE_API_BASE_URL=http://39.107.74.208:9999
+# 根据环境复制对应的环境配置文件
+COPY .env.${NODE_ENV} ./.env.${NODE_ENV}
+COPY .env ./.env
+
+# 设置环境变量
+ENV NODE_ENV=${NODE_ENV}
 
 # 构建项目
 RUN npm run build

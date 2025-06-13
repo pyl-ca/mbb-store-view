@@ -286,6 +286,24 @@ const loadReviews = async () => {
     reviews.value = response.records
     total.value = response.total
 
+    // 调试信息：查看评论数据
+    console.log('📝 评论数据加载完成:', {
+      productId: props.productId,
+      reviewsCount: reviews.value.length,
+      reviews: reviews.value
+    })
+
+    // 检查是否有评论图片
+    reviews.value.forEach((review, index) => {
+      if (review.images && review.images.length > 0) {
+        console.log(`🖼️ 评论 ${index + 1} 包含图片:`, review.images)
+        review.images.forEach((image, imgIndex) => {
+          const imageUrl = getReviewImageUrl(image)
+          console.log(`🖼️ 图片 ${imgIndex + 1} URL:`, imageUrl)
+        })
+      }
+    })
+
     // 同时获取统计数据
     const statsData = await reviewApi.getProductReviewStats(props.productId)
     stats.value = statsData

@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Mall Web 前端项目部署脚本 - 生产环境
-# 服务器IP: 39.107.74.208
+# Mall Web 前端项目部署脚本 - 开发环境
+# 服务器IP: localhost
 
-echo "🚀 开始部署 Mall Web 前端项目 (生产环境)..."
+echo "🚀 开始部署 Mall Web 前端项目 (开发环境)..."
 
 # 设置变量
-IMAGE_NAME="mall-web"
-CONTAINER_NAME="mall-web-frontend"
-PORT="80"
-SERVER_IP="39.107.74.208"
+IMAGE_NAME="mall-web-dev"
+CONTAINER_NAME="mall-web-frontend-dev"
+PORT="3000"
+SERVER_IP="localhost"
 
 # 颜色输出
 RED='\033[0;31m'
@@ -30,8 +30,8 @@ docker rm $CONTAINER_NAME 2>/dev/null || true
 echo -e "${YELLOW}🗑️ 删除旧镜像...${NC}"
 docker rmi $IMAGE_NAME 2>/dev/null || true
 
-echo -e "${YELLOW}🔨 构建新镜像 (生产环境)...${NC}"
-if docker build -f Dockerfile.multi-stage --build-arg NODE_ENV=production -t $IMAGE_NAME .; then
+echo -e "${YELLOW}🔨 构建新镜像 (开发环境)...${NC}"
+if docker build -f Dockerfile.multi-stage --build-arg NODE_ENV=development -t $IMAGE_NAME .; then
     echo -e "${GREEN}✅ 镜像构建成功${NC}"
 else
     echo -e "${RED}❌ 镜像构建失败${NC}"
@@ -62,8 +62,8 @@ if docker ps | grep -q $CONTAINER_NAME; then
     docker ps | grep $CONTAINER_NAME
     echo ""
     echo -e "${GREEN}🎉 部署完成！${NC}"
-    echo -e "${GREEN}🌐 访问地址: http://$SERVER_IP${NC}"
-    echo -e "${GREEN}🔍 健康检查: http://$SERVER_IP/health${NC}"
+    echo -e "${GREEN}🌐 访问地址: http://$SERVER_IP:$PORT${NC}"
+    echo -e "${GREEN}🔍 健康检查: http://$SERVER_IP:$PORT/health${NC}"
 else
     echo -e "${RED}❌ 容器启动失败${NC}"
     echo "查看容器日志:"

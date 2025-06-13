@@ -14,7 +14,7 @@ import { ElMessage } from 'element-plus'
 import { getAccessToken, removeAccessToken } from './utils/auth'
 
 // 设置axios默认配置
-axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9999'
 axios.defaults.timeout = 10000
 
 console.log('当前环境:', import.meta.env.MODE)

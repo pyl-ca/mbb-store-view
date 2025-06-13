@@ -33,6 +33,7 @@
               :src="getProductImage(product.image)"
               fit="cover"
               class="product-image"
+              @error="handleImageError"
             />
             <div class="product-info">
               <h4 class="product-name">{{ product.name }}</h4>
@@ -155,7 +156,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type UploadFile } from 'ele
 import { ArrowLeft, Check, Plus, InfoFilled, WarningFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { reviewApi } from '../api/review'
-import { API_ENDPOINTS } from '../api/config'
+import { API_ENDPOINTS, API_BASE_URL } from '../api/config'
 import type { CreateReviewRequest, ReviewTag } from '../types/review'
 
 const route = useRoute()
@@ -329,10 +330,75 @@ const selectProduct = (product: any) => {
 
 // 获取商品图片
 const getProductImage = (image: string) => {
-  if (!image) return '/images/placeholder.jpg'
-  if (image.startsWith('http')) return image
-  // 修正图片路径：使用正确的静态资源路径
-  return `/static${image}`
+  console.log('🖼️ getProductImage 调用:', { image })
+
+  if (!image) {
+    console.log('🖼️ 图片为空，使用占位图')
+    return '/images/placeholder.jpg'
+  }
+
+  if (image.startsWith('http')) {
+    console.log('🖼️ 图片已是完整URL:', image)
+    return image
+  }
+
+  // 根据网关配置，商品图片通过 /static/** 路径访问
+  const baseUrl = API_BASE_URL
+  let imageUrl = ''
+
+  if (image.startsWith('/images/product/')) {
+    // 商品图片路径：/images/product/xxx.jpg -> /static/images/product/xxx.jpg
+    imageUrl = `${baseUrl}/static${image}`
+  } else if (image.startsWith('/static/')) {
+    // 已包含static前缀，直接使用
+    imageUrl = `${baseUrl}${image}`
+  } else if (image.startsWith('/')) {
+    // 相对路径，添加static前缀
+    imageUrl = `${baseUrl}/static${image}`
+  } else {
+    // 不以/开头，添加完整路径
+    imageUrl = `${baseUrl}/static/images/product/${image}`
+  }
+
+  console.log('🖼️ 最终图片URL:', imageUrl)
+  return imageUrl
+}
+
+// 图片加载错误处理
+const handleImageError = (event: Event) => {
+  const target = event.target as HTMLImageElement
+  console.log('🚨 图片加载失败:', target.src)
+
+  // 从失败的URL中提取图片路径
+  const originalSrc = target.src
+  const imagePathMatch = originalSrc.match(/\/images\/product\/[\w_.-]+\.(jpg|jpeg|png|gif)$/i)
+  const imagePath = imagePathMatch ? imagePathMatch[0] : '/images/product/placeholder.jpg'
+
+  console.log('📝 提取的图片路径:', imagePath)
+
+  // 根据网关配置构建备选URL
+  const baseUrl = API_BASE_URL
+
+  const alternativeUrls = [
+    `${baseUrl}/static${imagePath}`,  // 通过网关的静态资源路径
+    `http://localhost:9003/static${imagePath}`,  // 直接访问product-service
+    `http://localhost:9003${imagePath}`,  // 直接访问product-service（无static前缀）
+    '/images/placeholder.jpg'  // 最后的占位图
+  ]
+
+  console.log('🔄 备选URL列表:', alternativeUrls)
+
+  // 找到当前失败的URL在备选列表中的位置
+  const currentIndex = alternativeUrls.indexOf(originalSrc)
+  const nextIndex = currentIndex + 1
+
+  if (nextIndex < alternativeUrls.length) {
+    console.log('🔄 尝试备选URL:', alternativeUrls[nextIndex])
+    target.src = alternativeUrls[nextIndex]
+  } else {
+    console.log('❌ 所有URL都失败了，使用占位图')
+    target.src = '/images/placeholder.jpg'
+  }
 }
 
 // 文件上传成功

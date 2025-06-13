@@ -192,8 +192,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Top, Bottom, Delete } from '@element-plus/icons-vue'
 import axios from 'axios'
-import ProductForm from '@/components/admin/ProductForm.vue'
-import ProductDetail from '@/components/admin/ProductDetail.vue'
+import ProductForm from '../../components/admin/ProductForm.vue'
+import ProductDetail from '../../components/admin/ProductDetail.vue'
+import { getProductImageUrl } from '../../utils/imageUtils'
 
 // 数据定义
 const loading = ref(false)
@@ -269,6 +270,26 @@ async function loadProducts() {
       const data = response.data.data
       products.value = data.records || data || []
       pagination.total = data.total || products.value.length
+
+      // 调试：检查商品图片字段
+      console.log('🔍 ProductManagement 加载的商品数据:', products.value)
+      console.log('🔍 前3个商品的图片字段:', products.value.slice(0, 3).map(p => ({
+        id: p.id,
+        name: p.name,
+        image: p.image,
+        imageType: typeof p.image
+      })))
+
+      // 详细调试每个商品的图片字段
+      products.value.forEach((product, index) => {
+        if (index < 5) { // 只调试前5个商品
+          console.log(`🖼️ 商品${index + 1} [${product.id}] ${product.name}:`)
+          console.log('  - 原始image字段:', product.image)
+          console.log('  - image类型:', typeof product.image)
+          console.log('  - image是否为空:', !product.image)
+          console.log('  - 处理后的URL:', getProductImageUrl(product.image))
+        }
+      })
     }
   } catch (error) {
     console.error('加载商品列表失败:', error)
@@ -484,19 +505,7 @@ async function handleDelete(product: any) {
 
 // 获取商品图片
 function getProductImage(image: string) {
-  if (!image) return '/images/placeholder.jpg'
-  if (image.startsWith('http')) return image
-
-  // 使用完整的服务器地址
-  const API_BASE_URL = 'http://39.107.74.208:9999'
-
-  // 如果路径已经包含 /static 前缀，直接拼接基础URL
-  if (image.startsWith('/static/')) {
-    return `${API_BASE_URL}${image}`
-  }
-
-  // 否则添加 /static 前缀
-  return `${API_BASE_URL}/static${image}`
+  return getProductImageUrl(image) || '/images/placeholder.jpg'
 }
 
 // 格式化时间

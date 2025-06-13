@@ -315,8 +315,10 @@ const categoryOptions = computed(() => {
   return props.categories
 })
 
+// 导入API配置
+import { API_BASE_URL } from '../../api/config'
+
 // 上传配置 - 根据环境动态设置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
 // 🔧 修复：使用正确的后端接口路径
 const uploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/image`
 const detailUploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/product/detail`
@@ -326,7 +328,6 @@ console.log('🔧 ProductForm 上传配置:')
 console.log('🔧 API_BASE_URL:', API_BASE_URL)
 console.log('🔧 主图上传URL:', uploadUrl)
 console.log('🔧 详情图上传URL:', detailUploadUrl)
-console.log('🔧 环境变量 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
 
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`
@@ -420,18 +421,21 @@ function getImageUrl(imagePath: string) {
   // 使用环境变量配置的API基础URL
   const baseUrl = API_BASE_URL
 
-  // 兼容不同的路径格式
+  // 根据网关配置，商品图片通过 /static/** 路径访问
   let fullUrl = ''
 
   if (imagePath.startsWith('/images/product/')) {
-    // 标准格式：/images/product/uuid.jpg
-    fullUrl = `${baseUrl}/product-service/static${imagePath}`
+    // 标准格式：/images/product/uuid.jpg -> /static/images/product/uuid.jpg
+    fullUrl = `${baseUrl}/static${imagePath}`
   } else if (imagePath.startsWith('/images/')) {
-    // 当前后端返回格式：/images/20250610/uuid.png
-    fullUrl = `${baseUrl}/product-service/static${imagePath}`
+    // 当前后端返回格式：/images/20250610/uuid.png -> /static/images/20250610/uuid.png
+    fullUrl = `${baseUrl}/static${imagePath}`
+  } else if (imagePath.startsWith('/static/')) {
+    // 已包含static前缀，直接使用
+    fullUrl = `${baseUrl}${imagePath}`
   } else {
-    // 其他格式，默认添加 /product-service/static/ 前缀
-    fullUrl = `${baseUrl}/product-service/static/${imagePath}`
+    // 其他格式，默认添加 /static/images/product/ 前缀
+    fullUrl = `${baseUrl}/static/images/product/${imagePath}`
   }
 
   console.log('🔗 ProductForm生成的显示URL:', fullUrl)

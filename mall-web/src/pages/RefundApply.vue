@@ -145,6 +145,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { getProductImageUrl } from '../utils/imageUtils'
+import { API_BASE_URL } from '../api/config'
 
 const router = useRouter()
 const route = useRoute()
@@ -230,7 +231,6 @@ onMounted(() => {
   }
 
   // 设置上传URL - 使用完整URL通过网关
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://39.107.74.208:9999'
   uploadUrl.value = `${API_BASE_URL}/payment-service/api/v1/refund/upload-image`
   console.log('🔧 设置上传URL:', uploadUrl.value)
 
