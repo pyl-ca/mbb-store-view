@@ -86,20 +86,27 @@
     <!-- SKU列表 -->
     <el-card class="sku-section" header="SKU管理" style="margin-top: 20px">
       <el-table :data="skuList" border>
-        <el-table-column label="SKU图片" width="100">
+        <el-table-column label="SKU图片" width="120">
           <template #default="{ row, $index }">
-            <el-upload
-              class="sku-image-uploader"
-              :action="uploadUrl"
-              :headers="uploadHeaders"
-              :show-file-list="false"
-              :on-success="(response) => handleSkuImageSuccess(response, $index)"
-              :before-upload="beforeImageUpload"
-              accept="image/*"
-            >
-              <img v-if="row.image" :src="getImageUrl(row.image)" class="sku-image" />
-              <el-icon v-else class="sku-image-placeholder"><Plus /></el-icon>
-            </el-upload>
+            <div class="sku-image-selector">
+              <!-- 当前选中的图片 -->
+              <div class="current-image" @click="openImageSelector($index)">
+                <img v-if="row.image" :src="getImageUrl(row.image)" class="sku-image" />
+                <div v-else class="sku-image-placeholder">
+                  <el-icon><Plus /></el-icon>
+                  <span>选择图片</span>
+                </div>
+              </div>
+              <!-- 图片选择按钮 -->
+              <el-button
+                size="small"
+                type="primary"
+                @click="openImageSelector($index)"
+                style="margin-top: 5px; width: 100%"
+              >
+                {{ row.image ? '更换图片' : '选择图片' }}
+              </el-button>
+            </div>
           </template>
         </el-table-column>
 
@@ -122,23 +129,29 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="价格" width="120">
+        <el-table-column label="价格" width="180">
           <template #default="{ row }">
             <el-input-number
               v-model="row.price"
               :min="0"
               :precision="2"
               placeholder="价格"
+              style="width: 100%; height: 40px; font-size: 14px;"
+              :controls-position="'right'"
+              size="large"
             />
           </template>
         </el-table-column>
 
-        <el-table-column label="库存" width="100">
+        <el-table-column label="库存" width="150">
           <template #default="{ row }">
             <el-input-number
               v-model="row.stock"
               :min="0"
               placeholder="库存"
+              style="width: 100%; height: 40px; font-size: 14px;"
+              :controls-position="'right'"
+              size="large"
             />
           </template>
         </el-table-column>
@@ -166,13 +179,65 @@
         手动添加SKU
       </el-button>
     </el-card>
+
+    <!-- 图片选择对话框 -->
+    <el-dialog
+      v-model="imageSelectDialogVisible"
+      title="选择SKU图片"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div class="image-selector-content">
+        <div v-if="props.detailImages && props.detailImages.length > 0" class="detail-images-grid">
+          <div class="section-title">从详情图中选择：</div>
+          <div class="images-grid">
+            <div
+              v-for="(image, index) in props.detailImages"
+              :key="index"
+              class="image-item"
+              :class="{ 'selected': selectedImageForSku === image }"
+              @click="selectImageForSku(image)"
+            >
+              <img :src="getImageUrl(image)" :alt="`详情图 ${index + 1}`" />
+              <div class="image-overlay">
+                <el-icon v-if="selectedImageForSku === image" class="check-icon">
+                  <Check />
+                </el-icon>
+              </div>
+              <div class="image-label">详情图 {{ index + 1 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="no-images">
+          <el-empty description="暂无详情图片">
+            <template #description>
+              <p>请先上传商品详情图片，然后再为SKU选择图片</p>
+            </template>
+          </el-empty>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="cancelImageSelection">取消</el-button>
+          <el-button
+            type="primary"
+            @click="confirmImageSelection"
+            :disabled="!selectedImageForSku"
+          >
+            确认选择
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Check } from '@element-plus/icons-vue'
 
 // Props
 interface Props {
@@ -180,10 +245,14 @@ interface Props {
     specList: any[]
     skuList: any[]
   }
+  detailImages?: string[]  // 已上传的详情图列表
+  productId?: string | number  // 商品ID
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => ({ specList: [], skuList: [] })
+  modelValue: () => ({ specList: [], skuList: [] }),
+  detailImages: () => [],
+  productId: undefined
 })
 
 // Emits
@@ -194,6 +263,11 @@ const emit = defineEmits<{
 // 数据定义
 const specList = ref<any[]>([])
 const skuList = ref<any[]>([])
+
+// 图片选择相关数据
+const imageSelectDialogVisible = ref(false)
+const currentSkuIndex = ref(-1)
+const selectedImageForSku = ref('')
 
 // 导入API配置
 import { API_BASE_URL } from '../../api/config'
@@ -259,54 +333,52 @@ function generateSkus() {
 
   // 获取所有规格值的组合
   const combinations = getSpecCombinations()
-  
+
   // 保留已有SKU的数据
   const existingSkus = new Map()
   skuList.value.forEach(sku => {
-    const key = sku.specValueIds?.join(',') || ''
+    // 使用SKU名称作为唯一标识
+    const key = sku.skuName
     existingSkus.set(key, sku)
   })
 
   // 生成新的SKU列表
   skuList.value = combinations.map(combination => {
-    const key = combination.specValueIds.join(',')
-    const existing = existingSkus.get(key)
-    
+    const existing = existingSkus.get(combination.name)
+
     return existing || {
       skuName: combination.name,
       price: 0,
       stock: 0,
       image: '',
-      status: true,
-      specValueIds: combination.specValueIds
+      status: true
     }
   })
 }
 
 // 获取规格组合
 function getSpecCombinations() {
-  const validSpecs = specList.value.filter(spec => 
+  const validSpecs = specList.value.filter(spec =>
     spec.name && spec.values.length > 0
   )
 
   if (validSpecs.length === 0) return []
 
-  let combinations = [{ name: '', specValueIds: [] }]
+  let combinations = [{ name: '' }]
 
-  validSpecs.forEach((spec, specIndex) => {
+  validSpecs.forEach((spec) => {
     const newCombinations: any[] = []
-    
+
     combinations.forEach(combination => {
-      spec.values.forEach((value: any, valueIndex: number) => {
+      spec.values.forEach((value: any) => {
         if (value.value) {
           newCombinations.push({
-            name: combination.name ? `${combination.name} ${value.value}` : value.value,
-            specValueIds: [...combination.specValueIds, `${specIndex}-${valueIndex}`]
+            name: combination.name ? `${combination.name} ${value.value}` : value.value
           })
         }
       })
     })
-    
+
     combinations = newCombinations
   })
 
@@ -315,14 +387,8 @@ function getSpecCombinations() {
 
 // 获取SKU的规格值显示
 function getSkuSpecValues(sku: any) {
-  if (!sku.specValueIds) return []
-  
-  return sku.specValueIds.map((id: string) => {
-    const [specIndex, valueIndex] = id.split('-').map(Number)
-    const spec = specList.value[specIndex]
-    const value = spec?.values[valueIndex]
-    return value ? `${spec.name}: ${value.value}` : ''
-  }).filter(Boolean)
+  // 直接使用SKU名称显示，因为SKU名称已经包含了所有规格值信息
+  return sku.skuName ? [sku.skuName] : []
 }
 
 // 手动添加SKU
@@ -332,8 +398,7 @@ function addSku() {
     price: 0,
     stock: 0,
     image: '',
-    status: true,
-    specValueIds: []
+    status: true
   })
 }
 
@@ -421,37 +486,42 @@ function handleValueImageSuccess(response: any, specIndex: number, valueIndex: n
   }
 }
 
-// SKU图片上传成功
-function handleSkuImageSuccess(response: any, skuIndex: number) {
-  console.log('🔍 SKU图片上传响应:', response)
-
-  // 兼容多种成功状态码格式
-  const isSuccess = response.code === '000000' ||
-                   response.code === 200 ||
-                   response.code === '200' ||
-                   response.success === true
-
-  if (isSuccess) {
-    let imageUrl = response.data?.url || response.data?.fullUrl || response.data?.relativePath || response.data?.filePath
-
-    // 根据网关配置，静态资源应该通过 /static/** 路径访问
-    if (imageUrl && imageUrl.startsWith('http')) {
-      // 提取文件名
-      const urlParts = imageUrl.split('/')
-      const filename = urlParts[urlParts.length - 1]
-
-      // 转换为静态资源路径
-      imageUrl = `${API_BASE_URL}/static/images/product/${filename}`
-      console.log('🔧 SKU图片转换为静态资源路径:', imageUrl)
-    }
-
-    skuList.value[skuIndex].image = imageUrl
-    console.log('✅ SKU图片上传成功，存储路径:', imageUrl)
-    ElMessage.success('图片上传成功')
-  } else {
-    console.error('❌ SKU图片上传失败:', response)
-    ElMessage.error(response.message || response.msg || '图片上传失败')
+// 打开图片选择器
+function openImageSelector(skuIndex: number) {
+  if (!props.detailImages || props.detailImages.length === 0) {
+    ElMessage.warning('请先上传商品详情图片')
+    return
   }
+
+  currentSkuIndex.value = skuIndex
+  selectedImageForSku.value = skuList.value[skuIndex].image || ''
+  imageSelectDialogVisible.value = true
+}
+
+// 选择图片
+function selectImageForSku(imageUrl: string) {
+  selectedImageForSku.value = imageUrl
+}
+
+// 确认选择图片
+function confirmImageSelection() {
+  if (currentSkuIndex.value >= 0 && selectedImageForSku.value) {
+    skuList.value[currentSkuIndex.value].image = selectedImageForSku.value
+    console.log('✅ SKU图片选择成功:', selectedImageForSku.value)
+    ElMessage.success('图片选择成功')
+  }
+
+  // 关闭对话框
+  imageSelectDialogVisible.value = false
+  currentSkuIndex.value = -1
+  selectedImageForSku.value = ''
+}
+
+// 取消选择图片
+function cancelImageSelection() {
+  imageSelectDialogVisible.value = false
+  currentSkuIndex.value = -1
+  selectedImageForSku.value = ''
 }
 </script>
 
@@ -541,5 +611,139 @@ function handleSkuImageSuccess(response: any, skuIndex: number) {
 
 .el-input-number {
   width: 100%;
+}
+
+/* 图片选择器样式 */
+.sku-image-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.current-image {
+  width: 80px;
+  height: 80px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.3s;
+  margin-bottom: 5px;
+}
+
+.current-image:hover {
+  border-color: #409eff;
+}
+
+.sku-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.sku-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #8c939d;
+  font-size: 12px;
+}
+
+.sku-image-placeholder .el-icon {
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+/* 图片选择对话框样式 */
+.image-selector-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: #303133;
+}
+
+.images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 15px;
+}
+
+.image-item {
+  position: relative;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.image-item:hover {
+  border-color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.image-item.selected {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.image-item img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(64, 158, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.image-item.selected .image-overlay {
+  opacity: 1;
+}
+
+.check-icon {
+  color: white;
+  font-size: 24px;
+}
+
+.image-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+}
+
+.no-images {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.dialog-footer {
+  text-align: right;
 }
 </style>

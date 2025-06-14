@@ -7,11 +7,24 @@ const defaultProdUrl = 'http://39.107.74.208:9999'
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
   (isDevelopment ? defaultDevUrl : defaultProdUrl)
 
+// 图片服务配置
+export const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || API_BASE_URL
+export const STATIC_BASE_URL = import.meta.env.VITE_STATIC_BASE_URL || `${API_BASE_URL}/static`
+
+// 上传配置
+export const UPLOAD_CONFIG = {
+  MAX_SIZE: parseInt(import.meta.env.VITE_UPLOAD_MAX_SIZE || '10485760'), // 10MB
+  ALLOWED_TYPES: (import.meta.env.VITE_UPLOAD_ALLOWED_TYPES || 'image/jpeg,image/png,image/gif,image/webp').split(',')
+}
+
 console.log('🔧 API配置信息:')
 console.log('🔧 当前模式:', import.meta.env.MODE)
 console.log('🔧 是否开发环境:', isDevelopment)
 console.log('🔧 环境变量API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
 console.log('🔧 最终API_BASE_URL:', API_BASE_URL)
+console.log('🔧 图片服务URL:', IMAGE_BASE_URL)
+console.log('🔧 静态资源URL:', STATIC_BASE_URL)
+console.log('🔧 上传配置:', UPLOAD_CONFIG)
 
 // 各服务的API端点
 export const API_ENDPOINTS = {
@@ -35,7 +48,15 @@ export const API_ENDPOINTS = {
     SKU: '/sku',
     CATEGORIES: '/categories',
     BANNERS: '/banners',
-    SPECS: '/specs'
+    SPECS: '/specs',
+    // 商品管理相关
+    ADMIN_PRODUCTS: '/admin/products',
+    PRE_ALLOCATE_ID: '/admin/products/pre-allocate-id',
+    // 图片上传相关
+    UPLOAD_IMAGE: '/upload/image',
+    UPLOAD_PRODUCT_DETAIL: '/upload/product/detail',
+    UPLOAD_CATEGORY_ICON: '/upload/category/icon',
+    UPLOAD_BANNER: '/upload/banner'
   },
 
   // 购物车服务
@@ -218,6 +239,17 @@ export const apiUrls = {
   productBanners: () => buildApiUrl('PRODUCT_SERVICE', `${API_ENDPOINTS.PRODUCT_SERVICE.BANNERS}/list`),
   productRecommend: () => buildApiUrl('PRODUCT_SERVICE', `${API_ENDPOINTS.PRODUCT_SERVICE.PRODUCTS}/recommend`),
   productSearch: () => buildApiUrl('PRODUCT_SERVICE', `${API_ENDPOINTS.PRODUCT_SERVICE.PRODUCTS}/select`),
+
+  // 商品管理相关
+  adminProducts: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.ADMIN_PRODUCTS),
+  adminProductDetail: (id: string) => buildApiUrl('PRODUCT_SERVICE', `${API_ENDPOINTS.PRODUCT_SERVICE.ADMIN_PRODUCTS}/${id}`),
+  preAllocateProductId: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.PRE_ALLOCATE_ID),
+
+  // 图片上传相关
+  uploadProductImage: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.UPLOAD_IMAGE),
+  uploadProductDetail: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.UPLOAD_PRODUCT_DETAIL),
+  uploadCategoryIcon: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.UPLOAD_CATEGORY_ICON),
+  uploadBanner: () => buildApiUrl('PRODUCT_SERVICE', API_ENDPOINTS.PRODUCT_SERVICE.UPLOAD_BANNER),
 
   // 购物车相关
   cartList: () => buildApiUrl('CART_SERVICE', API_ENDPOINTS.CART_SERVICE.CART),

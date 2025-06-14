@@ -2,8 +2,8 @@
  * 图片处理工具函数
  */
 
-// 获取API基础URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9999'
+// 导入配置
+import { API_BASE_URL, IMAGE_BASE_URL, STATIC_BASE_URL, UPLOAD_CONFIG } from '../api/config'
 console.log('🌐 当前 API_BASE_URL:', API_BASE_URL)
 console.log('🌐 环境变量 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL)
 console.log('🌐 当前环境模式:', import.meta.env.MODE)
@@ -220,7 +220,7 @@ export function getReviewImageUrl(imagePath: string): string {
     }
   }
 
-  return `${API_BASE_URL}${finalPath}`
+  return `${IMAGE_BASE_URL}${finalPath}`
 }
 
 /**
@@ -231,6 +231,51 @@ export function getReviewImageUrl(imagePath: string): string {
  */
 export function getUploadUrl(service: string, endpoint: string): string {
   return `${API_BASE_URL}/${service}${endpoint}`
+}
+
+/**
+ * 获取上传配置
+ * @returns 上传配置对象
+ */
+export function getUploadConfig() {
+  return UPLOAD_CONFIG
+}
+
+/**
+ * 验证文件类型
+ * @param file 文件对象
+ * @returns 是否为允许的类型
+ */
+export function validateFileType(file: File): boolean {
+  return UPLOAD_CONFIG.ALLOWED_TYPES.includes(file.type)
+}
+
+/**
+ * 验证文件大小
+ * @param file 文件对象
+ * @returns 是否在允许的大小范围内
+ */
+export function validateFileSize(file: File): boolean {
+  return file.size <= UPLOAD_CONFIG.MAX_SIZE
+}
+
+/**
+ * 获取静态资源URL
+ * @param path 资源路径
+ * @returns 完整的静态资源URL
+ */
+export function getStaticUrl(path: string): string {
+  if (!path) return ''
+
+  // 如果已经是完整URL，直接返回
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+
+  // 确保路径以/开头
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+
+  return `${STATIC_BASE_URL}${normalizedPath}`
 }
 
 /**

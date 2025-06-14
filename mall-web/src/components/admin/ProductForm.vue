@@ -130,8 +130,9 @@
               :action="uploadUrl"
               :headers="uploadHeaders"
               :show-file-list="false"
-              :on-success="handleImageSuccess"
-              :before-upload="beforeImageUpload"
+              :on-success="handleMainImageSuccess"
+              :before-upload="beforeMainImageUpload"
+              :data="getMainImageUploadData"
               accept="image/*"
             >
               <img v-if="form.image" :src="getImageUrl(form.image)" class="uploaded-image" />
@@ -148,12 +149,13 @@
           <div class="detail-images-section">
             <el-upload
               class="detail-image-uploader"
-              :action="detailUploadUrl"
+              :action="uploadUrl"
               :headers="uploadHeaders"
               :file-list="detailImageList"
               :on-success="handleDetailImageSuccess"
               :on-remove="handleDetailImageRemove"
-              :before-upload="beforeImageUpload"
+              :before-upload="beforeDetailImageUpload"
+              :data="getDetailImageUploadData"
               accept="image/*"
               multiple
               list-type="picture-card"
@@ -182,7 +184,12 @@
 
       <!-- SKU和规格管理 -->
       <el-card class="form-section" header="SKU和规格管理">
-        <SkuManager :model-value="skuData" @update:model-value="skuData = $event" />
+        <SkuManager
+          :model-value="skuData"
+          @update:model-value="skuData = $event"
+          :detail-images="form.detailImages"
+          :product-id="preAllocatedProductId || form.id"
+        />
       </el-card>
 
       <!-- 定时上下架 -->
@@ -254,6 +261,7 @@ const emit = defineEmits<{
 // 数据定义
 const formRef = ref<FormInstance>()
 const submitLoading = ref(false)
+const preAllocatedProductId = ref<number | null>(null)
 
 // 表单数据
 const form = reactive({
@@ -316,35 +324,63 @@ const categoryOptions = computed(() => {
 })
 
 // 导入API配置
-import { API_BASE_URL } from '../../api/config'
+import { API_BASE_URL, apiUrls } from '../../api/config'
+import {
+  getImageUrl as getImageUrlUtil,
+  validateFileType,
+  validateFileSize,
+  getUploadConfig
+} from '../../utils/imageUtils'
 
-// 上传配置 - 根据环境动态设置
-// 🔧 修复：使用正确的后端接口路径
-const uploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/image`
-const detailUploadUrl = `${API_BASE_URL}/product-service/api/v1/upload/product/detail`
+// 上传配置 - 使用统一的图片上传接口
+const uploadUrl = apiUrls.uploadProductImage()
+const uploadConfig = getUploadConfig()
 
 // 🔍 调试信息
 console.log('🔧 ProductForm 上传配置:')
 console.log('🔧 API_BASE_URL:', API_BASE_URL)
-console.log('🔧 主图上传URL:', uploadUrl)
-console.log('🔧 详情图上传URL:', detailUploadUrl)
+console.log('🔧 统一上传URL:', uploadUrl)
+console.log('🔧 上传配置:', uploadConfig)
 
 const uploadHeaders = computed(() => ({
   Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}`
 }))
 
 // 监听visible变化
-watch(() => props.visible, (newVal) => {
+watch(() => props.visible, async (newVal) => {
   if (newVal && props.productData) {
     // 编辑模式，填充数据
     Object.assign(form, props.productData)
+    preAllocatedProductId.value = props.productData.id
     updateDetailImageList()
     updateSkuData()
   } else if (newVal) {
-    // 新增模式，重置表单
+    // 新增模式，重置表单并获取预分配ID
     resetForm()
+    await getPreAllocatedProductId()
   }
 })
+
+// 获取预分配商品ID
+async function getPreAllocatedProductId() {
+  try {
+    console.log('🔍 获取预分配商品ID...')
+    const response = await axios.post('/product-service/api/v1/admin/products/pre-allocate-id', {}, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
+    })
+
+    if (response.data.code === '000000' && response.data.data) {
+      preAllocatedProductId.value = response.data.data
+      console.log('✅ 获取预分配商品ID成功:', preAllocatedProductId.value)
+    } else {
+      console.error('❌ 获取预分配商品ID失败:', response.data)
+      ElMessage.error('获取商品ID失败')
+    }
+  } catch (error) {
+    console.error('❌ 获取预分配商品ID异常:', error)
+    ElMessage.error('获取商品ID失败')
+  }
+}
 
 // 重置表单
 function resetForm() {
@@ -375,6 +411,7 @@ function resetForm() {
     specList: [] as any[],
     skuList: [] as any[]
   }
+  preAllocatedProductId.value = null
 }
 
 // 更新详情图片列表
@@ -408,6 +445,22 @@ function updateSkuData() {
   }
 }
 
+// 获取主图上传数据
+function getMainImageUploadData() {
+  return {
+    productId: preAllocatedProductId.value || form.id,
+    imageType: 'main'
+  }
+}
+
+// 获取详情图上传数据
+function getDetailImageUploadData() {
+  return {
+    productId: preAllocatedProductId.value || form.id,
+    imageType: 'detail'
+  }
+}
+
 // 获取图片URL - 用于显示图片
 function getImageUrl(imagePath: string) {
   console.log('🔍 ProductForm获取图片URL，原始路径:', imagePath)
@@ -424,7 +477,10 @@ function getImageUrl(imagePath: string) {
   // 根据网关配置，商品图片通过 /static/** 路径访问
   let fullUrl = ''
 
-  if (imagePath.startsWith('/images/product/')) {
+  if (imagePath.startsWith('/static/images/product/')) {
+    // 新格式：/static/images/product/10051.jpg
+    fullUrl = `${baseUrl}${imagePath}`
+  } else if (imagePath.startsWith('/images/product/')) {
     // 标准格式：/images/product/uuid.jpg -> /static/images/product/uuid.jpg
     fullUrl = `${baseUrl}/static${imagePath}`
   } else if (imagePath.startsWith('/images/')) {
@@ -442,8 +498,34 @@ function getImageUrl(imagePath: string) {
   return fullUrl
 }
 
-// 图片上传前验证
-function beforeImageUpload(file: any) {
+// 主图上传前验证
+function beforeMainImageUpload(file: any) {
+  if (!preAllocatedProductId.value && !form.id) {
+    ElMessage.error('请先获取商品ID')
+    return false
+  }
+
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+// 详情图上传前验证
+function beforeDetailImageUpload(file: any) {
+  if (!preAllocatedProductId.value && !form.id) {
+    ElMessage.error('请先获取商品ID')
+    return false
+  }
+
   const isImage = file.type.startsWith('image/')
   const isLt5M = file.size / 1024 / 1024 < 5
 
@@ -459,7 +541,7 @@ function beforeImageUpload(file: any) {
 }
 
 // 主图上传成功
-function handleImageSuccess(response: any) {
+function handleMainImageSuccess(response: any) {
   console.log('🔍 主图上传响应:', response)
   console.log('🔍 响应码类型:', typeof response.code, '值:', response.code)
 
@@ -476,18 +558,16 @@ function handleImageSuccess(response: any) {
     console.log('🔍 后端返回的路径:', imagePath)
 
     if (imagePath) {
-      // 🔧 关键修复：只保存相对路径到数据库，不保存完整URL
+      // 保存相对路径到表单，如：/static/images/product/10051.jpg
       console.log('🔧 保存相对路径到表单:', imagePath)
-
-      // 只保存相对路径，如：/images/product/uuid文件名.jpg
       form.image = imagePath
     }
 
     console.log('✅ 主图上传成功，存储路径:', form.image)
-    ElMessage.success('图片上传成功')
+    ElMessage.success('主图上传成功')
   } else {
     console.error('❌ 主图上传失败:', response)
-    ElMessage.error(response.message || response.msg || '图片上传失败')
+    ElMessage.error(response.message || response.msg || '主图上传失败')
   }
 }
 
@@ -509,18 +589,16 @@ function handleDetailImageSuccess(response: any) {
     console.log('🔍 详情图片后端返回路径:', imagePath)
 
     if (imagePath) {
-      // 🔧 关键修复：只保存相对路径到数据库，不保存完整URL
+      // 保存相对路径到表单，如：/static/images/product/10051_1.jpg
       console.log('🔧 详情图片保存相对路径:', imagePath)
-
-      // 只保存相对路径，如：/images/product/uuid文件名.jpg
       form.detailImages.push(imagePath)
     }
 
-    console.log('✅ 详情图片上传成功')
-    ElMessage.success('图片上传成功')
+    console.log('✅ 详情图片上传成功，当前详情图片列表:', form.detailImages)
+    ElMessage.success('详情图片上传成功')
   } else {
     console.error('❌ 详情图片上传失败:', response)
-    ElMessage.error(response.message || response.msg || '图片上传失败')
+    ElMessage.error(response.message || response.msg || '详情图片上传失败')
   }
 }
 
@@ -545,11 +623,36 @@ async function handleSubmit() {
     await formRef.value.validate()
     submitLoading.value = true
 
+    // 验证必填字段
+    if (!form.name) {
+      ElMessage.error('请输入商品名称')
+      return
+    }
+    if (!form.categoryId) {
+      ElMessage.error('请选择商品分类')
+      return
+    }
+    if (form.price <= 0) {
+      ElMessage.error('请输入有效的商品价格')
+      return
+    }
+
+    // 清理SKU数据，移除specValueIds字段，让后端自动处理关联
+    const cleanSkuList = skuData.value.skuList.map(sku => {
+      const { specValueIds, ...cleanSku } = sku
+      return cleanSku
+    })
+
     // 合并表单数据和SKU数据
     const submitData = {
       ...form,
       specList: skuData.value.specList,
-      skuList: skuData.value.skuList
+      skuList: cleanSkuList
+    }
+
+    // 如果是新增模式且有预分配ID，使用预分配ID
+    if (!isEdit.value && preAllocatedProductId.value) {
+      submitData.id = preAllocatedProductId.value
     }
 
     const url = isEdit.value
@@ -558,16 +661,47 @@ async function handleSubmit() {
 
     const method = isEdit.value ? 'put' : 'post'
 
-    await axios[method](url, submitData, {
+    console.log('🔍 提交商品数据:', submitData)
+    console.log('🔍 使用预分配ID:', preAllocatedProductId.value)
+    console.log('🔍 清理后的SKU数据:', cleanSkuList)
+    console.log('🔍 规格数据:', skuData.value.specList)
+
+    const response = await axios[method](url, submitData, {
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('token')}` }
     })
 
-    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
-    emit('success')
-    handleClose()
-  } catch (error) {
+    console.log('✅ 商品提交响应:', response.data)
+
+    // 检查响应状态
+    if (response.data.code === '000000' || response.data.success === true) {
+      ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+      emit('success')
+      handleClose()
+    } else {
+      console.error('❌ 商品提交失败:', response.data)
+      ElMessage.error(response.data.message || response.data.msg || '操作失败')
+    }
+  } catch (error: any) {
     console.error('提交失败:', error)
-    ElMessage.error('操作失败')
+
+    // 更详细的错误处理
+    let errorMessage = '操作失败'
+    if (error.response) {
+      // 服务器返回错误状态码
+      const errorData = error.response.data
+      errorMessage = errorData.message || errorData.msg || `服务器错误 (${error.response.status})`
+      console.error('❌ 服务器错误:', errorData)
+    } else if (error.request) {
+      // 请求发送失败
+      errorMessage = '网络连接失败，请检查网络'
+      console.error('❌ 网络错误:', error.request)
+    } else {
+      // 其他错误
+      errorMessage = error.message || '未知错误'
+      console.error('❌ 其他错误:', error.message)
+    }
+
+    ElMessage.error(errorMessage)
   } finally {
     submitLoading.value = false
   }

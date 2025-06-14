@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  mall-web-frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.multi-stage
+      args:
+        NODE_ENV: development
+    container_name: mall-web-frontend-dev
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:9999
+      - VITE_DEBUG=true
+      - VITE_SERVER_IP=localhost
+      - VITE_IMAGE_BASE_URL=http://localhost:9999
+      - VITE_STATIC_BASE_URL=http://localhost:9999/static
+    networks:
+      - mall-dev-network
+    restart: unless-stopped
+    labels:
+      - "project=mall-web"
+      - "environment=development"
+      - "service=frontend"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      # 开发环境可以挂载源码目录进行热重载（可选）
+      # - ./src:/app/src:ro
+      # - ./public:/app/public:ro
+      - dev-logs:/var/log/nginx
+
+  # 可选：添加开发工具容器
+  # mall-web-dev-tools:
+  #   image: node:18-alpine
+  #   container_name: mall-web-dev-tools
+  #   working_dir: /app
+  #   volumes:
+  #     - .:/app
+  #   networks:
+  #     - mall-dev-network
+  #   command: tail -f /dev/null
+  #   profiles:
+  #     - tools
+
+networks:
+  mall-dev-network:
+    driver: bridge
+    name: mall-dev-network
+
+volumes:
+  dev-logs:
+    name: mall-web-dev-logs
